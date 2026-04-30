@@ -208,15 +208,16 @@ Fork the repo, make your changes, and open a PR.
 
 ## 🤝 Related projects in the RTL-for-AI-tools community
 
-Five independent developers each built userland RTL fixes for five different surfaces. The fact that all of us had to ship our own fix is itself a comment on how overdue the upstream BiDi work is across the AI-tooling stack:
+Six independent developers each built userland RTL fixes for the AI-tooling stack. The fact that all of us had to ship our own fix is itself a comment on how overdue the upstream BiDi work is:
 
 - **[Adaptive-RTL-Extension](https://github.com/Lidor-Mashiach/Adaptive-RTL-Extension)** by Lidor Mashiach — generic browser extension with click-to-select RTL for any website, including LLM chat UIs (Claude.ai, ChatGPT, Gemini, etc.).
 - **[Claude.ai RTL Support (Chrome extension)](https://chromewebstore.google.com/detail/claude-ai-rtl-support/lkopcjdmfmffphbomfhecalbojiaeape)** — Chrome extension purpose-built for Claude.ai specifically. Lighter than the generic adaptive one if you only need RTL on Claude's web UI.
 - **[rtl-for-vs-code-agents](https://github.com/GuyRonnen/rtl-for-vs-code-agents)** by Guy Ronnen — VS Code extension covering Claude Code, Cursor, Antigravity, and Gemini Code Assist in the VS Code webview layer.
+- **[Claude Code RTL Support](https://open-vsx.org/extension/yechielby/claude-code-rtl)** by Yechiel Bar-Yehuda — VS Code / Cursor / Antigravity extension purpose-built for the official Claude Code IDE plugin. 2,400+ Open VSX installs. Complementary to Guy Ronnen's broader webview fix above — pick this one if you specifically live inside the Claude Code IDE panel.
 - **[Claude-for-word-RTL-fix](https://github.com/asaf-aizone/Claude-for-word-RTL-fix)** by Asaf Aizone — Hebrew/Arabic RTL fix for the Claude for Word (Desktop) add-in.
 - **[kivun-terminal-wsl](https://github.com/noambrand/kivun-terminal-wsl)** (this repo) — terminal-layer fix: a `kivun-claude-bidi` Node wrapper for Claude Code's TUI output, plus a one-click installer for WSL2+Konsole / Linux Konsole / macOS Terminal.
 
-The five surfaces (generic browser DOM, Claude.ai web UI, VS Code webview, Microsoft Word, terminal) are disjoint — pick the one that matches where you're hitting the BiDi problem.
+The surfaces (generic browser DOM, Claude.ai web UI, VS Code / IDE webview, Microsoft Word, terminal) are largely disjoint — pick the one that matches where you're hitting the BiDi problem.
 
 <div dir="rtl">
 
@@ -364,17 +365,18 @@ CLAUDE_FLAGS=                    # למשל --continue
 
 ### 🤝 פרויקטים קשורים בקהילת RTL-for-AI-tools
 
-חמישה מפתחים עצמאיים בנו פתרונות RTL לחמש סביבות שונות. העובדה שכולנו נאלצנו לכתוב פתרון userland נפרד מעידה לבדה על כמה זמן זה כבר נדחה ב-upstream:
+שישה מפתחים עצמאיים בנו פתרונות RTL לסביבות השונות של ה-AI tooling. העובדה שכולנו נאלצנו לכתוב פתרון userland נפרד מעידה לבדה על כמה זמן זה כבר נדחה ב-upstream:
 
 <ul dir="rtl" align="right">
 <li><strong><a href="https://github.com/Lidor-Mashiach/Adaptive-RTL-Extension">Adaptive-RTL-Extension</a></strong> מאת לידור משיח - הרחבת דפדפן גנרית עם click-to-select ל-RTL בכל אתר, כולל ממשקי צ'אט של מודלי שפה.</li>
 <li><strong><a href="https://chromewebstore.google.com/detail/claude-ai-rtl-support/lkopcjdmfmffphbomfhecalbojiaeape">Claude.ai RTL Support (הרחבת Chrome)</a></strong> - הרחבה ל-Chrome ייעודית ל-Claude.ai. קלה יותר מהגנרית אם אתם צריכים RTL רק על ממשק הווב של Claude.</li>
 <li><strong><a href="https://github.com/GuyRonnen/rtl-for-vs-code-agents">rtl-for-vs-code-agents</a></strong> מאת גיא רונן - הרחבה ל-VS Code עבור Claude Code, Cursor, Antigravity ו-Gemini Code Assist בשכבת ה-webview.</li>
+<li><strong><a href="https://open-vsx.org/extension/yechielby/claude-code-rtl">Claude Code RTL Support</a></strong> מאת Yechiel Bar-Yehuda - הרחבת VS Code / Cursor / Antigravity ייעודית לתוסף Claude Code הרשמי. 2,400+ התקנות ב-Open VSX. משלימה את הפתרון של גיא רונן למעלה - בחרו את זו אם אתם עובדים בתוך פאנל Claude Code שב-IDE.</li>
 <li><strong><a href="https://github.com/asaf-aizone/Claude-for-word-RTL-fix">Claude-for-word-RTL-fix</a></strong> מאת אסף אייזון - תיקון RTL לעברית/ערבית עבור תוסף Claude ל-Microsoft Word (Desktop).</li>
 <li><strong><a href="https://github.com/noambrand/kivun-terminal-wsl">kivun-terminal-wsl</a></strong> (הפרויקט הזה) - תיקון בשכבת הטרמינל.</li>
 </ul>
 
-חמש הסביבות (DOM של דפדפן גנרי, ממשק הווב של Claude.ai, webview של VS Code, Microsoft Word, טרמינל) נפרדות זו מזו - בחרו את הפתרון שמתאים למקום שבו אתם נתקלים בבעיית ה-BiDi.
+הסביבות (DOM של דפדפן גנרי, ממשק הווב של Claude.ai, webview של VS Code / IDE, Microsoft Word, טרמינל) נפרדות זו מזו ברובן - בחרו את הפתרון שמתאים למקום שבו אתם נתקלים בבעיית ה-BiDi.
 
 </div>
 
