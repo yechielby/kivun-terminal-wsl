@@ -291,6 +291,32 @@ else
     log "WARNING: kivun-claude-bidi source not found in package — skipping wrapper install"
 fi
 
+# --- BiDi wrapper self-test ---
+# Pipe a known Hebrew+English line through the Injector and check that the
+# RLE U+202B byte sequence (0xE2 0x80 0xAB) lands in the output. If it
+# does, the wrapper is functional end-to-end on this host. Non-blocking:
+# a FAIL is logged but install continues — the launcher's silent fallback
+# to unwrapped claude already covers the user-visible regression case.
+if [ -f "$WRAPPER_DST/lib/injector.js" ] && run_as_user "command -v node" &>/dev/null; then
+    log "Running BiDi self-test..."
+    SELFTEST_OUT=$(run_as_user "cd '$WRAPPER_DST' && node" 2>&1 << 'SELFTEST_JS'
+const { Injector } = require('./lib/injector');
+const i = new Injector();
+process.stdout.write(i.write('Hello שלום world\n'));
+process.stdout.write(i.end());
+SELFTEST_JS
+)
+    if printf '%s' "$SELFTEST_OUT" | grep -qF "$(printf '\xe2\x80\xab')"; then
+        log "BiDi self-test: PASS"
+    else
+        log "BiDi self-test: FAIL"
+        log "  (RTL languages may render as LTR; set KIVUN_BIDI_WRAPPER=off in config to silence)"
+        log "  (selftest output snippet: $(printf '%s' "$SELFTEST_OUT" | head -c 200))"
+    fi
+else
+    log "BiDi self-test: SKIP (wrapper not installed or node unavailable)"
+fi
+
 # Set CLAUDE_CODE_STATUSLINE in user's shell profile
 SHELL_RC="$REAL_HOME/.zshrc"
 if [ -f "$REAL_HOME/.bashrc" ] && [ ! -f "$REAL_HOME/.zshrc" ]; then
@@ -362,14 +388,6 @@ MAC_TERMINAL=terminal
 TERMINAL_COLOR=kivun
 
 # =================================================================
-# TEXT DIRECTION
-# =================================================================
-# rtl - Hebrew/Arabic input aligns to the right edge
-# ltr - default terminal behavior
-# Default: rtl
-TEXT_DIRECTION=rtl
-
-# =================================================================
 # FOLDER PICKER ON LAUNCH
 # =================================================================
 # When true, the desktop shortcut pops a Finder folder-browse
@@ -406,7 +424,38 @@ CONFIG
     chown "$REAL_USER" "$CONFIG_FILE"
     log "Configuration file created at $CONFIG_FILE"
 else
-    log "Configuration file already exists — skipping"
+    # Existing config from a prior install. Don't overwrite — users may
+    # have hand-edited values. But DO append any keys that were added in
+    # later versions and are missing here, so users don't end up with a
+    # config that silently lacks newer toggles (e.g. KIVUN_BIDI_WRAPPER
+    # was added after the initial v1.0 release).
+    log "Configuration file already exists — checking for missing keys"
+    migrated=0
+    add_missing_key() {
+        local key="$1"
+        local default_value="$2"
+        local comment="$3"
+        if ! grep -qE "^[[:space:]]*${key}=" "$CONFIG_FILE"; then
+            {
+                echo ""
+                echo "# $comment"
+                echo "${key}=${default_value}"
+            } >> "$CONFIG_FILE"
+            log "  added missing key: ${key}=${default_value}"
+            migrated=$((migrated + 1))
+        fi
+    }
+    add_missing_key "KIVUN_BIDI_WRAPPER" "on"  "RTL handling for Hebrew/Arabic/etc. on (default) or off."
+    add_missing_key "MAC_TERMINAL"       "terminal" "Terminal emulator: terminal, iterm2, or wezterm."
+    add_missing_key "TERMINAL_COLOR"     "kivun"    "Terminal color: kivun (light-blue theme) or default."
+    add_missing_key "FOLDER_PICKER"      "true"     "Pop a folder picker on launch: true or false."
+    add_missing_key "CLAUDE_FLAGS"       ""         "Optional flags appended to every claude invocation (e.g. --continue)."
+    if [ "$migrated" -gt 0 ]; then
+        chown "$REAL_USER" "$CONFIG_FILE"
+        log "Migrated $migrated missing key(s) into $CONFIG_FILE"
+    else
+        log "No missing keys — config is current"
+    fi
 fi
 
 # --- Desktop Shortcut with Folder Picker ---

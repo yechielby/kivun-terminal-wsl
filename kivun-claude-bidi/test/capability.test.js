@@ -53,14 +53,45 @@ describe('detect-terminal fixtures', () => {
     assert.equal(res.profile, 'KivunTerminal');
   });
 
+  it('TERM_PROGRAM=Apple_Terminal → ok with apple-terminal name', () => {
+    const res = detectTerminal({
+      TERM_PROGRAM: 'Apple_Terminal',
+      TERM_PROGRAM_VERSION: '455.1',
+    });
+    assert.equal(res.ok, true);
+    assert.equal(res.name, 'apple-terminal');
+    assert.equal(res.profile, '455.1');
+  });
+
+  it('TERM_PROGRAM=iTerm.app → ok with iterm2 name', () => {
+    const res = detectTerminal({
+      TERM_PROGRAM: 'iTerm.app',
+      TERM_PROGRAM_VERSION: '3.5.0',
+    });
+    assert.equal(res.ok, true);
+    assert.equal(res.name, 'iterm2');
+    assert.equal(res.profile, '3.5.0');
+  });
+
+  it('TERM_PROGRAM=WezTerm → ok with wezterm name', () => {
+    const res = detectTerminal({ TERM_PROGRAM: 'WezTerm' });
+    assert.equal(res.ok, true);
+    assert.equal(res.name, 'wezterm');
+  });
+
   it('empty env → not ok', () => {
     const res = detectTerminal({});
     assert.equal(res.ok, false);
     assert.match(res.reason, /Konsole/);
   });
 
-  it('xterm-only env (no KONSOLE_*) → not ok (v1 policy)', () => {
+  it('TERM=xterm only, no TERM_PROGRAM, no KONSOLE_* → not ok', () => {
     const res = detectTerminal({ TERM: 'xterm-256color' });
+    assert.equal(res.ok, false);
+  });
+
+  it('TERM_PROGRAM=unknown → not ok', () => {
+    const res = detectTerminal({ TERM_PROGRAM: 'SomeUnknownTerminal' });
     assert.equal(res.ok, false);
   });
 });

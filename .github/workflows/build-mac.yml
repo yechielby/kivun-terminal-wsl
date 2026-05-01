@@ -61,6 +61,29 @@ jobs:
           pkgutil --expand-full "$PKG" build/extracted-pkg || true
           find build/extracted-pkg -name 'postinstall' -print -exec head -20 {} \; || true
 
+      - name: Verify launcher routes through BiDi wrapper
+        # Hard fail if a future commit drops the wrapper exec line from the
+        # generated launcher heredoc — that's how Hebrew rendering silently
+        # regressed in user2's report. Without this gate, "the .pkg builds"
+        # is not enough signal to ship a release.
+        run: |
+          POSTINSTALL=$(find build/extracted-pkg -name 'postinstall' | head -1)
+          test -n "$POSTINSTALL" || (echo "postinstall not found in extracted pkg"; exit 1)
+          # Extract the launcher heredoc (between SCRIPT markers) and grep.
+          awk "/cat > \"\\\$SHORTCUT_PATH\" << 'SCRIPT'/,/^SCRIPT\$/" "$POSTINSTALL" \
+            | grep -qF 'kivun-claude-bidi' \
+            || (echo "Launcher heredoc lost its kivun-claude-bidi reference"; exit 1)
+          echo "Launcher references the BiDi wrapper ✓"
+
+      - name: Run BiDi wrapper smoke test
+        # End-to-end: spawn fake-claude under the real wrapper via node-pty
+        # and assert RLE/PDF brackets land around Hebrew runs. This is the
+        # only place in CI that exercises the wrapper end-to-end.
+        run: |
+          cd kivun-claude-bidi
+          npm install --production --no-audit --no-fund
+          bash test/smoke.sh
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
