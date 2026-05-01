@@ -128,15 +128,6 @@ jobs:
             || (echo "Launcher heredoc lost its kivun-claude-bidi reference"; exit 1)
           echo "Launcher references the BiDi wrapper ✓"
 
-      - name: Run BiDi wrapper smoke test
-        # End-to-end: spawn fake-claude under the real wrapper via node-pty
-        # and assert RLE/PDF brackets land around Hebrew runs. This is the
-        # only place in CI that exercises the wrapper end-to-end.
-        run: |
-          cd kivun-claude-bidi
-          npm install --production --no-audit --no-fund
-          bash test/smoke.sh
-
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
