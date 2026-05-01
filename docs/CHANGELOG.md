@@ -3,6 +3,32 @@
 All notable changes to Kivun Terminal are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.1] - 2026-05-01
+
+Mac RTL fix: the BiDi wrapper now actually engages on macOS Apple Terminal / iTerm2 / WezTerm. Per the brief in `MAC_RTL_FIX_BRIEF.md`.
+
+### Fixed: BiDi wrapper rejected non-Konsole environments
+
+`kivun-claude-bidi/lib/detect-terminal.js` allowlist was Konsole-only; the wrapper exited code 5 before claude spawned on a stock Mac install, which is why Hebrew rendered LTR instead of RTL. Widened the allowlist by `TERM_PROGRAM`: `Apple_Terminal`, `iTerm.app`, `WezTerm`. 4 new fixtures in `kivun-claude-bidi/test/capability.test.js`.
+
+### Mac postinstall
+
+- Stale-config migration: appends missing canonical keys (`KIVUN_BIDI_WRAPPER`, `MAC_TERMINAL`, `TERMINAL_COLOR`, `FOLDER_PICKER`, `CLAUDE_FLAGS`) to existing `~/Library/Application Support/Kivun-Terminal/config.txt` without overwriting user edits - handles users whose config predates a key.
+- BiDi self-test: pipes `Hello שלום world` through the Injector and logs `BiDi self-test: PASS|FAIL` to `/tmp/kivun_install.log`. Non-blocking; informational diagnostic.
+- Removed dead `TEXT_DIRECTION` config key from the Mac config heredoc and `mac/README.md` config-keys list. The key is parsed by no Mac code path.
+
+### CI
+
+- `.github/workflows/build-mac.yml`: hard-fail step that extracts the launcher heredoc from the postinstall and greps for `kivun-claude-bidi` - closes the "green CI but launcher broken" gap that bit v1.1.0.
+
+### Documentation
+
+- Root `README.md` and `mac/README.md`: bilingual (English + Hebrew, `<div dir="rtl">`) unsigned-pkg install walkthrough - Apple menu → System Settings → Privacy & Security → Allow Anyway.
+
+### Caveat
+
+If `Apple_Terminal` turns out to render Unicode RLE/PDF/RLM marks as visible glyphs (rather than treating them as zero-width directional formatting), this fix will surface as visible black-square boxes around Hebrew runs instead of correct RTL rendering. Pending diagnostic from one user (`sarel-mac-mini`) with that exact symptom; rollback path is gating the `apple-terminal` allowlist entry behind an env var (e.g. `KIVUN_BIDI_WRAPPER_TERMINAL_APP_OK=1`).
+
 ## [1.2.0] - 2026-04-28
 
 Auto-install bulletproofing + CI hardening. Single user-visible change: the launcher's Claude auto-install path no longer hangs forever on the new `claude.ai/install.sh` ("native build") that Anthropic shipped 2026-04-27. Path completes in 30-90s and verifies on disk; falls through to npm fallback on failure.
