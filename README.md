@@ -86,8 +86,32 @@ Supports apt (Debian/Ubuntu), dnf (Fedora/RHEL), pacman (Arch/Manjaro), zypper (
 ### macOS
 
 1. **[Download `Kivun_Terminal_Setup_mac.pkg`](https://github.com/noambrand/kivun-terminal-wsl/releases/latest)**
-2. Double-click; allow in **System Settings → Privacy & Security**, then run again.
+2. Double-click the `.pkg` to install. The installer is unsigned, so macOS blocks it on first attempt — follow the **Installing an unsigned .pkg** steps below.
 3. Use the **Kivun Terminal** desktop shortcut or right-click a folder → **Services → Open with Kivun Terminal**.
+
+#### Installing an unsigned .pkg / התקנת קובץ .pkg לא חתום
+
+**English:**
+
+1. Double-click the downloaded `.pkg` file (usually in Downloads).
+2. Close the security warning dialog.
+3. Click the Apple menu ( in the top-left corner of your screen) → **System Settings** → **Privacy & Security**.
+4. Scroll down and click **Allow Anyway** next to the blocked app.
+5. Double-click the `.pkg` again to run the installer.
+
+<div dir="rtl">
+
+<strong>עברית:</strong>
+
+<ol>
+<li>פתח את קובץ ה־<code>.pkg</code> (לחיצה כפולה מתוך Downloads).</li>
+<li>סגור את הודעת החסימה שמופיעה.</li>
+<li>לחץ על תפריט אפל (בפינה השמאלית־עליונה של המסך — &nbsp;) → <strong>System Settings</strong> → <strong>Privacy &amp; Security</strong>.</li>
+<li>גלול למטה ולחץ <strong>Allow Anyway</strong> ליד הקובץ שנחסם.</li>
+<li>חזור לקובץ והרץ אותו שוב (לחיצה כפולה).</li>
+</ol>
+
+</div>
 
 > First run requires a Claude Pro/Max subscription or an [Anthropic API key](https://console.anthropic.com).
 

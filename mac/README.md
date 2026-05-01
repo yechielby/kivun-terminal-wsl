@@ -15,7 +15,17 @@ A macOS `.pkg` installer that bundles Claude Code with a Kivun-themed Terminal.a
 
 ## Install
 
-Download `Kivun_Terminal_Setup_mac.pkg` from the latest GitHub release and double-click it. macOS will ask for your admin password; that's normal (the installer needs to install Homebrew and Claude Code system-wide).
+Download `Kivun_Terminal_Setup_mac.pkg` from the [latest GitHub release](https://github.com/noambrand/kivun-terminal-wsl/releases/latest).
+
+The installer is currently unsigned, so macOS blocks it on first attempt. Bypass:
+
+1. Double-click the downloaded `.pkg` file (usually in Downloads).
+2. Close the security warning dialog.
+3. Click the Apple menu ( in the top-left corner of your screen) → **System Settings** → **Privacy & Security**.
+4. Scroll down and click **Allow Anyway** next to the blocked app.
+5. Double-click the `.pkg` again to run the installer.
+
+macOS will ask for your admin password during install — that's normal (the installer needs to install Homebrew and Claude Code system-wide).
 
 Install log lives at `/tmp/kivun_install.log` - check there if something goes wrong.
 
@@ -26,7 +36,6 @@ Install log lives at `/tmp/kivun_install.log` - check there if something goes wr
 - `RESPONSE_LANGUAGE` - one of 23 values (english, hebrew, arabic, persian, urdu, kurdish, pashto, sindhi, yiddish, syriac, dhivehi, nko, adlam, mandaic, samaritan, dari, uyghur, balochi, kashmiri, shahmukhi, azeri-south, jawi, turoyo)
 - `MAC_TERMINAL` - `terminal` (default), `iterm2`, or `wezterm`. Terminal.app has weaker BiDi than Konsole; install iTerm2 or WezTerm and set this to match for better RTL rendering.
 - `TERMINAL_COLOR` - `kivun` (light-blue theme applied via osascript) or `default`
-- `TEXT_DIRECTION` - `rtl` or `ltr`
 - `FOLDER_PICKER` - `true` (default on macOS; shortcut pops a folder picker) or `false`
 - `CLAUDE_FLAGS` - optional flags passed to every `claude` invocation (e.g. `--continue`)
 - `KIVUN_BIDI_WRAPPER` - `on` (default) / `off`. Pipe Claude through the BiDi wrapper for correct Hebrew/Arabic rendering.
@@ -64,5 +73,5 @@ Removes the desktop shortcut, the Finder Quick Action, the shell-rc `CLAUDE_CODE
 ## Known limitations
 
 - **Hebrew RTL first line** - fixed in v1.1.0 by the bundled `kivun-claude-bidi` wrapper (default-on), which injects an RLM at line start when the first strong char is RTL. iTerm2 and WezTerm still have stronger native BiDi than Terminal.app, so switching via `MAC_TERMINAL` is recommended for heavy RTL workflows. Upstream tracking issue: [anthropics/claude-code#39881](https://github.com/anthropics/claude-code/issues/39881).
-- **Code-signing / notarization** - the `.pkg` is currently unsigned. macOS Gatekeeper will warn on first launch; right-click → Open to bypass. A signed+notarized build is planned for v1.1.
+- **Code-signing / notarization** - the `.pkg` is currently unsigned, so macOS Gatekeeper blocks it on first run. See the [Install](#install) section above for the System Settings → Privacy & Security bypass.
 - **Intel vs Apple Silicon** - the postinstall auto-detects `uname -m` and installs Homebrew at `/opt/homebrew` (arm64) or `/usr/local/Homebrew` (x86_64).
