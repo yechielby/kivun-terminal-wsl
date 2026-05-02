@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="Kivun_Terminal_Hero.png" width="700" alt="Kivun Terminal - RTL Claude Code on Windows, Linux, macOS">
+  <img src="Kivun_Terminal_Hero.png" width="700" alt="Kivun Terminal - RTL Claude Code on Windows and Linux">
 </p>
 
 <p align="center">
@@ -14,13 +14,15 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License"></a>
-  <img src="https://img.shields.io/badge/version-1.2.3-brightgreen" alt="v1.2.3">
-  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey" alt="Platform">
+  <img src="https://img.shields.io/badge/version-1.2.4-brightgreen" alt="v1.2.4">
+  <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux-lightgrey" alt="Platform">
   <img src="https://img.shields.io/badge/RTL%20languages-11-orange" alt="11 RTL Languages">
   <a href="https://github.com/noambrand/kivun-terminal-wsl/releases/latest"><img src="https://img.shields.io/github/downloads/noambrand/kivun-terminal-wsl/total?color=purple&label=downloads" alt="Total Downloads"></a>
 </p>
 
-<h3 align="center">Real RTL Claude Code terminal. Hebrew, Arabic, Persian, Urdu and 8 more - rendered correctly, on Windows, Linux, and macOS.</h3>
+<h3 align="center">Real RTL Claude Code terminal. Hebrew, Arabic, Persian, Urdu and 8 more - rendered correctly, on Windows and Linux.</h3>
+
+<p align="center"><sub><strong>macOS support deprecated as of v1.2.4</strong> — no native Mac terminal renders mixed Hebrew+English correctly today. <a href="mac/README.md">Details &amp; uninstall instructions →</a></sub></p>
 
 <p align="center">
   <a href="#quick-start">Quick Start</a> &bull;
@@ -47,13 +49,13 @@
 
 ## Why Kivun Terminal?
 
-|  | Launchpad CLI v2.4.2 | Kivun Terminal v1.2.3 |
+|  | Launchpad CLI v2.4.2 | Kivun Terminal v1.2.4 |
 |---|---|---|
 | **Runtime (Windows)** | Windows Terminal (native) | WSL2 + Ubuntu + Konsole |
 | **RTL/BiDi rendering** | LTR only (Windows Terminal has no BiDi engine) | ✅ Full RTL + line-start RLM fix for Claude's bullet-line direction bug ([anthropics/claude-code#39881](https://github.com/anthropics/claude-code/issues/39881)) |
 | **Supported RTL languages** | 0 | 11 (hebrew, arabic, persian, urdu, pashto, kurdish, dari, uyghur, sindhi, yiddish, syriac) |
 | **Linux support** | Windows + macOS only (Linux planned) | ✅ apt / dnf / pacman / zypper |
-| **macOS support** | ✅ .pkg | ✅ .pkg with BiDi wrapper |
+| **macOS support** | ✅ .pkg | ❌ Deprecated as of v1.2.4 (no Mac terminal renders mixed Hebrew+English correctly — see [`mac/README.md`](mac/README.md)) |
 | **Statusline** (model, context %, usage limits) | ✅ pre-installed | ✅ pre-installed (same `statusline.mjs`) |
 | **Light-blue "Kivun" terminal theme** | ✅ Windows Terminal color scheme | ✅ Konsole `KivunTerminal` profile + `ColorSchemeNoam` |
 | **Startup time** | ~2 s | ~6 s (Konsole launch) |
@@ -85,37 +87,9 @@ Supports apt (Debian/Ubuntu), dnf (Fedora/RHEL), pacman (Arch/Manjaro), zypper (
 
 ### macOS
 
-1. **[Download `Kivun_Terminal_Setup_mac.pkg`](https://github.com/noambrand/kivun-terminal-wsl/releases/latest)**
-2. Double-click the `.pkg` to install. The installer is unsigned, so macOS blocks it on first attempt — follow the **Installing an unsigned .pkg** steps below.
-3. Use the **Kivun Terminal** desktop shortcut or right-click a folder → **Services → Open with Kivun Terminal**.
+**Not supported as of v1.2.4.** No native macOS terminal renders mixed Hebrew + English correctly today (Apple Terminal lacks a BiDi engine, iTerm2 3.6.x mirrors Hebrew, WezTerm's `bidi_enabled` is half-broken in mixed scripts). For Hebrew work on Mac, use a Windows or Linux machine. Full context, evidence, and uninstall instructions in [`mac/README.md`](mac/README.md). Existing v1.2.x Mac users can still download the deprecated `.pkg` from the [v1.2.3 release](https://github.com/noambrand/kivun-terminal-wsl/releases/tag/v1.2.3) for rollback purposes.
 
-> **macOS RTL note:** Apple Terminal cannot do RTL paragraph alignment, and iTerm2 3.6.x mirrors Hebrew. The `.pkg` auto-installs **WezTerm** (the only macOS terminal that renders Hebrew correctly out of the box) and sets it as the default — no manual config needed.
-
-#### Installing an unsigned .pkg / התקנת קובץ .pkg לא חתום
-
-**English:**
-
-1. Double-click the downloaded `.pkg` file (usually in Downloads).
-2. Close the security warning dialog.
-3. Click the Apple menu ( in the top-left corner of your screen) → **System Settings** → **Privacy & Security**.
-4. Scroll down and click **Allow Anyway** next to the blocked app.
-5. Double-click the `.pkg` again to run the installer.
-
-<div dir="rtl">
-
-<strong>עברית:</strong>
-
-<ol>
-<li>פתח את קובץ ה־<code>.pkg</code> (לחיצה כפולה מתוך Downloads).</li>
-<li>סגור את הודעת החסימה שמופיעה.</li>
-<li>לחץ על תפריט אפל (בפינה השמאלית־עליונה של המסך — &nbsp;) → <strong>System Settings</strong> → <strong>Privacy &amp; Security</strong>.</li>
-<li>גלול למטה ולחץ <strong>Allow Anyway</strong> ליד הקובץ שנחסם.</li>
-<li>חזור לקובץ והרץ אותו שוב (לחיצה כפולה).</li>
-</ol>
-
-</div>
-
-> First run requires a Claude Pro/Max subscription or an [Anthropic API key](https://console.anthropic.com).
+> First run on Windows or Linux requires a Claude Pro/Max subscription or an [Anthropic API key](https://console.anthropic.com).
 
 ## Status Bar
 
@@ -140,7 +114,6 @@ A custom **light-blue Kivun color scheme** (`#C8E6FF` background, dark text, blu
 |---|---|---|
 | Windows (WSL+Konsole) | `KivunTerminal.profile` + `ColorSchemeNoam.colorscheme` | `~/.local/share/konsole/` (WSL) |
 | Linux (Konsole) | Same profile + color scheme | `~/.local/share/konsole/` |
-| macOS (Terminal.app) | Background / cursor / text colors set via osascript on launch | applied at runtime |
 
 Disable via `TERMINAL_COLOR=default` in your config to fall back to the terminal emulator's defaults.
 
@@ -172,13 +145,13 @@ Toggle the wrapper itself via `KIVUN_BIDI_WRAPPER=on|off` in your config. Each i
 
 ```mermaid
 graph TD
-    A[Installer .exe / .pkg / install.sh] --> B{Dependency Check}
+    A[Installer .exe / install.sh] --> B{Dependency Check}
     B -->|Missing| C[Install Konsole/Terminal + Node.js + Git]
     B -->|Present| D[Skip]
     C --> E[Install Claude Code via curl claude.ai/install.sh]
     D --> E
     E --> F[Deploy kivun-claude-bidi wrapper + npm install]
-    F --> G[Register Konsole profile / WT theme / Terminal.app config]
+    F --> G[Register Konsole profile + color scheme]
     G --> H[Create Desktop Shortcut + Right-Click Integration]
 
     subgraph Runtime
@@ -186,7 +159,7 @@ graph TD
         J --> K{Wrapper enabled?}
         K -->|Yes| L[Spawn kivun-claude-bidi → claude]
         K -->|No| M[Spawn claude directly]
-        L --> N[Konsole / Terminal.app / iTerm2]
+        L --> N[Konsole]
         M --> N
     end
 ```
@@ -197,11 +170,10 @@ graph TD
 |-----------|-----------|---------|
 | Windows installer | NSIS | Per-user install with WSL/Ubuntu/Konsole bootstrap |
 | Linux installer | Bash + apt/dnf/pacman/zypper | Distro-aware package install + user-home deploy |
-| macOS installer | pkgbuild | .pkg with postinstall via Homebrew |
 | BiDi wrapper | Node.js + node-pty | Pipes Claude output through Unicode RLE/PDF/RLM state machine |
 | Konsole profile | KDE Konsole `.profile` + `.colorscheme` | Light-blue Kivun theme + BidiEnabled=true |
 | Language map | Shared `payload/languages.sh` | 23-language `--append-system-prompt` map sourced by all launchers |
-| CI/CD | GitHub Actions | Automated Windows .exe + macOS .pkg + Linux .tar.gz builds on tag |
+| CI/CD | GitHub Actions | Automated Windows .exe + Linux .tar.gz builds on tag |
 
 ## Configuration
 
@@ -211,7 +183,6 @@ Per-platform config files (same schema across all three):
 |---|---|
 | Windows | `%LOCALAPPDATA%\Kivun-WSL\config.txt` |
 | Linux | `~/.config/kivun-terminal/config.txt` |
-| macOS | `~/Library/Application Support/Kivun-Terminal/config.txt` |
 
 ```ini
 RESPONSE_LANGUAGE=hebrew         # 23+ languages supported
@@ -228,7 +199,7 @@ Contributions welcome. Areas where help is especially useful:
 
 - **Wayland keyboard toggle** - `setxkbmap` is X11-only; Wayland needs DE-specific layout switching.
 - **More RTL language coverage** - N'Ko, Adlam, Mandaic, and a few others currently fall back to Hebrew xkb layouts.
-- **Integration testing** - different distros, different DEs, different macOS terminal emulators.
+- **Integration testing** - different distros, different DEs, different Konsole versions.
 
 Fork the repo, make your changes, and open a PR.
 
@@ -241,7 +212,7 @@ Six independent developers each built userland RTL fixes for the AI-tooling stac
 - **[rtl-for-vs-code-agents](https://github.com/GuyRonnen/rtl-for-vs-code-agents)** by Guy Ronnen — VS Code extension covering Claude Code, Cursor, Antigravity, and Gemini Code Assist in the VS Code webview layer.
 - **[Claude Code RTL Support](https://open-vsx.org/extension/yechielby/claude-code-rtl)** by Yechiel Bar-Yehuda — VS Code / Cursor / Antigravity extension purpose-built for the official Claude Code IDE plugin. 2,400+ Open VSX installs. Complementary to Guy Ronnen's broader webview fix above — pick this one if you specifically live inside the Claude Code IDE panel.
 - **[Claude-for-word-RTL-fix](https://github.com/asaf-aizone/Claude-for-word-RTL-fix)** by Asaf Aizone — Hebrew/Arabic RTL fix for the Claude for Word (Desktop) add-in.
-- **[kivun-terminal-wsl](https://github.com/noambrand/kivun-terminal-wsl)** (this repo) — terminal-layer fix: a `kivun-claude-bidi` Node wrapper for Claude Code's TUI output, plus a one-click installer for WSL2+Konsole / Linux Konsole / macOS Terminal.
+- **[kivun-terminal-wsl](https://github.com/noambrand/kivun-terminal-wsl)** (this repo) — terminal-layer fix: a `kivun-claude-bidi` Node wrapper for Claude Code's TUI output, plus a one-click installer for WSL2+Konsole on Windows or Konsole on Linux. (macOS deprecated as of v1.2.4 — see [`mac/README.md`](mac/README.md).)
 
 The surfaces (generic browser DOM, Claude.ai web UI, VS Code / IDE webview, Microsoft Word, terminal) are largely disjoint — pick the one that matches where you're hitting the BiDi problem.
 
@@ -253,7 +224,9 @@ The surfaces (generic browser DOM, Claude.ai web UI, VS Code / IDE webview, Micr
 
 ### 🎯 מה זה?
 
-כיוון טרמינל היא חבילת התקנה ושיגור עבור Claude Code עם תמיכה מלאה ב-RTL. רץ על Windows (דרך WSL2 + Konsole), Linux ו-macOS. הוא פותר את בעיית הצגת עברית/ערבית/פרסית/אורדו ועוד 7 שפות RTL ב-CLI של Claude Code, שלא נתמכות כראוי כברירת מחדל בטרמינלים מודרניים.
+כיוון טרמינל היא חבילת התקנה ושיגור עבור Claude Code עם תמיכה מלאה ב-RTL. רץ על Windows (דרך WSL2 + Konsole) ו-Linux. הוא פותר את בעיית הצגת עברית/ערבית/פרסית/אורדו ועוד 7 שפות RTL ב-CLI של Claude Code, שלא נתמכות כראוי כברירת מחדל בטרמינלים מודרניים.
+
+> ⚠️ <strong>תמיכת macOS הוסרה ב-v1.2.4.</strong> אין כיום אמולטור טרמינל ב-macOS שמציג עברית+אנגלית מעורבת בצורה תקינה (Apple Terminal חסר מנוע BiDi, iTerm2 3.6.x מהפך עברית, BiDi של WezTerm חצי-שבור). למשתמשי Mac שצריכים עברית - השתמשו ב-Windows או Linux. פרטים והוראות הסרה ב-<a href="mac/README.md"><code>mac/README.md</code></a>.
 
 כיוון מתקין את Claude Code, מקנפג את הטרמינל לפרופיל המתאים, ומעביר את הפלט של Claude דרך wrapper ייעודי (`kivun-claude-bidi`) שמטפל בבעיות הכיוון של עברית - כולל הבאג המעצבן שגרם לשורה הראשונה בכל תגובה להופיע מיושרת לשמאל.
 
@@ -273,7 +246,7 @@ The surfaces (generic browser DOM, Claude.ai web UI, VS Code / IDE webview, Micr
 - ✅ קיצור דרך לשולחן העבודה + תפריט קליק ימני על תיקיות
 - ✅ Folder picker - בחירת תיקיית עבודה לפני ההפעלה
 - ✅ Alt+Shift להחלפה בין עברית לאנגלית בתוך הטרמינל
-- ✅ נתמך על Windows, Linux (apt/dnf/pacman/zypper) ו-macOS
+- ✅ נתמך על Windows ו-Linux (apt/dnf/pacman/zypper). תמיכת macOS הוסרה ב-v1.2.4 - ראו <a href="mac/README.md"><code>mac/README.md</code></a>
 
 ### 📥 התקנה
 
@@ -282,7 +255,7 @@ The surfaces (generic browser DOM, Claude.ai web UI, VS Code / IDE webview, Micr
 <ul dir="rtl" align="right">
 <li><strong>Windows:</strong> <code>wsl --install</code> חד-פעמי, אז להוריד את <code>Kivun_Terminal_Setup.exe</code> מ-<a href="https://github.com/noambrand/kivun-terminal-wsl/releases/latest">הגרסה האחרונה</a> ולהריץ.</li>
 <li><strong>Linux:</strong> <code>git clone</code> + <code>./linux/install.sh</code>. תומך ב-apt/dnf/pacman/zypper.</li>
-<li><strong>macOS:</strong> להוריד את <code>Kivun_Terminal_Setup_mac.pkg</code> ולהריץ.</li>
+<li><strong>macOS:</strong> לא נתמך מ-v1.2.4 ואילך - ראו <a href="mac/README.md"><code>mac/README.md</code></a>.</li>
 </ul>
 
 <blockquote dir="rtl" align="right">
@@ -291,7 +264,7 @@ The surfaces (generic browser DOM, Claude.ai web UI, VS Code / IDE webview, Micr
 
 ### 📊 סטטוסליין
 
-סטטוסליין חי בשתי שורות בתחתית כל סשן Claude Code - אותו `statusline.mjs` מותקן בכל ההתקנות (Windows / Linux / macOS) ונרשם אוטומטית ב-`~/.claude/settings.json`:
+סטטוסליין חי בשתי שורות בתחתית כל סשן Claude Code - אותו `statusline.mjs` מותקן בכל ההתקנות (Windows / Linux) ונרשם אוטומטית ב-`~/.claude/settings.json`:
 
 > **MyProject** | 🟢 Sonnet 4.6 | Context 🟩🟩🟩🟩🟩⬜⬜⬜⬜⬜ 51% | tokens: 284K | 24:13
 >
@@ -312,7 +285,6 @@ The surfaces (generic browser DOM, Claude.ai web UI, VS Code / IDE webview, Micr
 |---|---|---|
 | Windows (WSL+Konsole) | `KivunTerminal.profile` + `ColorSchemeNoam.colorscheme` | `~/.local/share/konsole/` (בתוך WSL) |
 | Linux (Konsole) | אותו פרופיל וערכת צבעים | `~/.local/share/konsole/` |
-| macOS (Terminal.app) | רקע / סמן / צבעי טקסט מוגדרים דרך osascript בהפעלה | מוחל בזמן ריצה |
 
 לחזור לברירת המחדל של הטרמינל: להגדיר `TERMINAL_COLOR=default` בקובץ ה-config.
 
@@ -328,13 +300,13 @@ The surfaces (generic browser DOM, Claude.ai web UI, VS Code / IDE webview, Micr
 
 ```mermaid
 graph TD
-    A[Installer .exe / .pkg / install.sh] --> B{Dependency Check}
-    B -->|Missing| C[Install Konsole/Terminal + Node.js + Git]
+    A[Installer .exe / install.sh] --> B{Dependency Check}
+    B -->|Missing| C[Install Konsole + Node.js + Git]
     B -->|Present| D[Skip]
     C --> E[Install Claude Code via curl claude.ai/install.sh]
     D --> E
     E --> F[Deploy kivun-claude-bidi wrapper + npm install]
-    F --> G[Register Konsole profile / WT theme / Terminal.app config]
+    F --> G[Register Konsole profile + color scheme]
     G --> H[Create Desktop Shortcut + Right-Click Integration]
 
     subgraph Runtime
@@ -342,7 +314,7 @@ graph TD
         J --> K{Wrapper enabled?}
         K -->|Yes| L[Spawn kivun-claude-bidi → claude]
         K -->|No| M[Spawn claude directly]
-        L --> N[Konsole / Terminal.app / iTerm2]
+        L --> N[Konsole]
         M --> N
     end
 ```
@@ -353,21 +325,19 @@ graph TD
 |------|-----------|------|
 | התקנה ל-Windows | NSIS | התקנה למשתמש בלבד עם בוטסטראפ של WSL/Ubuntu/Konsole |
 | התקנה ל-Linux | Bash + apt/dnf/pacman/zypper | התקנת חבילות מודעת-distro + פריסה לבית המשתמש |
-| התקנה ל-macOS | pkgbuild | `.pkg` עם postinstall דרך Homebrew |
 | BiDi wrapper | Node.js + node-pty | מעביר פלט Claude דרך מכונת מצבים של Unicode RLE/PDF/RLM |
 | פרופיל Konsole | KDE Konsole `.profile` + `.colorscheme` | ערכת Kivun בתכלת + `BidiEnabled=true` |
 | מפת שפות | `payload/languages.sh` משותף | מפת `--append-system-prompt` ל-23 שפות, נטענת על ידי כל המשגרים |
-| CI/CD | GitHub Actions | בנייה אוטומטית של `.exe` ל-Windows + `.pkg` ל-macOS + `.tar.gz` ל-Linux בכל tag |
+| CI/CD | GitHub Actions | בנייה אוטומטית של `.exe` ל-Windows + `.tar.gz` ל-Linux בכל tag |
 
 ### ⚙️ קונפיגורציה
 
-קובצי קונפיג לפי פלטפורמה (אותה סכמה ב-3):
+קובצי קונפיג לפי פלטפורמה (אותה סכמה ב-2):
 
 | פלטפורמה | נתיב |
 |---|---|
 | Windows | `%LOCALAPPDATA%\Kivun-WSL\config.txt` |
 | Linux | `~/.config/Kivun-Terminal/config.txt` |
-| macOS | `~/Library/Application Support/Kivun-Terminal/config.txt` |
 
 ```ini
 RESPONSE_LANGUAGE=hebrew         # 23+ שפות נתמכות
@@ -385,7 +355,7 @@ CLAUDE_FLAGS=                    # למשל --continue
 
 - **מתג מקלדת ל-Wayland** - `setxkbmap` עובד רק ב-X11; Wayland צריך החלפת layout ספציפית לסביבת השולחן.
 - **כיסוי שפות RTL נוספות** - N'Ko, Adlam, Mandaic ועוד מספר שפות נופלות כרגע ל-fallback של מפת ה-xkb של עברית.
-- **בדיקות אינטגרציה** - distro-ים שונים, סביבות שולחן עבודה שונות, אמולטורי טרמינל שונים ב-macOS.
+- **בדיקות אינטגרציה** - distro-ים שונים, סביבות שולחן עבודה שונות, גרסאות Konsole שונות.
 
 עשו fork לריפו, בצעו את השינויים, ופתחו PR.
 

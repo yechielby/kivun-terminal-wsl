@@ -53,14 +53,12 @@ describe('detect-terminal fixtures', () => {
     assert.equal(res.profile, 'KivunTerminal');
   });
 
-  it('TERM_PROGRAM=Apple_Terminal → ok with apple-terminal name', () => {
+  it('TERM_PROGRAM=Apple_Terminal → not ok (macOS deprecated in v1.2.4)', () => {
     const res = detectTerminal({
       TERM_PROGRAM: 'Apple_Terminal',
       TERM_PROGRAM_VERSION: '455.1',
     });
-    assert.equal(res.ok, true);
-    assert.equal(res.name, 'apple-terminal');
-    assert.equal(res.profile, '455.1');
+    assert.equal(res.ok, false);
   });
 
   it('TERM_PROGRAM=iTerm.app → REJECTED (native BiDi double-applies)', () => {

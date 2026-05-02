@@ -1,6 +1,6 @@
-# Kivun Terminal v1.2.3
+# Kivun Terminal v1.2.4
 
-[![Version](https://img.shields.io/badge/version-1.2.3-brightgreen)](https://github.com/noambrand/kivun-terminal-wsl/releases/latest)
+[![Version](https://img.shields.io/badge/version-1.2.4-brightgreen)](https://github.com/noambrand/kivun-terminal-wsl/releases/latest)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-lightgrey)]()
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](../LICENSE)
 
@@ -71,7 +71,7 @@ See [README_INSTALLATION.md](README_INSTALLATION.md) for full options and [TROUB
 | **Runtime** | Windows Terminal (native) | WSL2 + Ubuntu + Konsole |
 | **RTL/BiDi rendering** | LTR only | Full RTL + line-start RLM fix for Claude's bullet-line direction bug ([anthropics/claude-code#39881](https://github.com/anthropics/claude-code/issues/39881)) |
 | **Supported RTL languages** | 0 | 11 (hebrew, arabic, persian, urdu, pashto, kurdish, dari, uyghur, sindhi, azerbaijani, +) |
-| **Linux + macOS** | macOS only (Linux planned) | Linux (apt/dnf/pacman/zypper) + macOS (.pkg) |
+| **Linux + macOS** | macOS only (Linux planned) | Linux (apt/dnf/pacman/zypper). macOS deprecated as of v1.2.4 — see [`mac/README.md`](../mac/README.md). |
 | **Startup time** | ~2 s | ~6 s (Konsole launch) |
 | **Statusline** | Yes | Yes (model, context %, session/weekly limits) |
 | **Install footprint** | ~150 MB | ~2 GB (WSL + Ubuntu) |
@@ -87,7 +87,7 @@ See [README_INSTALLATION.md](README_INSTALLATION.md) for full options and [TROUB
 
 - **Bulletproof Konsole-install-fail fallback.** When `apt-get install konsole` failed inside WSL (no GUI on a CI runner, flaky apt mirror, network outage, missing sudo cache), the launcher logged `Falling back to direct Claude execution` and `COMPLETE - Claude session ended`, but no Claude window actually appeared — the `goto :run_direct` jumped over the path-conversion and WSLg-user-detection blocks, leaving `WSL_PATH` / `INST_WSL` / `WSL_USER_FLAG` empty, so the fallback ran `wsl bash kivun-direct.sh` with no path prefix, bash couldn't find the script, and the wsl exit code wasn't checked. v1.1.18 reorders the .bat so all three variables are set before the Konsole check, so both the Konsole-launch path and the direct-fallback path work end-to-end. The new CI jobs in `validate-launcher-windows.yml` (PR #60) caught this and assert it stays fixed.
 - Inherits v1.1.17 (`%USERPROFILE%` upstream substitution + WSLg taskbar icon via `.desktop` + `--name`), v1.1.16 (cursor-forward → literal-space replacement on RTL lines, USER-CONFIRMED), v1.1.11 (no per-run RLE/PDF on RTL lines), v1.1.10 (SGR color flatten on RTL lines), v1.1.9 (strip-incoming bidi controls + diagnostic side log), v1.1.8 (bullet-strip workaround for Konsole 23.x), v1.1.7 (branded Konsole window icon over VcXsrv + `setsid` detach), v1.1.6 (active Claude PATH discovery for nvm/pnpm/snap/corp installs).
-- Test coverage: 87 injector unit fixtures + smoke test against fake-claude via node-pty, all green on Linux + macOS + Windows.
+- Test coverage: 87 injector unit fixtures + smoke test against fake-claude via node-pty, all green on Linux + Windows. (macOS test coverage deprecated alongside the platform in v1.2.4.)
 
 ### Common first checks (when something's wrong)
 
