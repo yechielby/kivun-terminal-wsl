@@ -33,6 +33,7 @@ cp mac/scripts/postinstall "$BUILD_DIR/scripts/"
 cp payload/statusline.mjs "$BUILD_DIR/scripts/statusline.mjs"
 cp payload/configure-statusline.js "$BUILD_DIR/scripts/configure-statusline.js"
 cp payload/languages.sh "$BUILD_DIR/scripts/languages.sh"
+cp mac/scripts/wezterm.lua "$BUILD_DIR/scripts/wezterm.lua"
 cp mac/uninstall.sh "$BUILD_DIR/scripts/uninstall.sh"
 
 # Stage the BiDi wrapper source — node_modules and .git excluded so the
