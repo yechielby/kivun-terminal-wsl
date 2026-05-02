@@ -3,6 +3,43 @@
 All notable changes to Kivun Terminal are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.4] - 2026-05-03
+
+**macOS support is deprecated.** v1.2.0 → v1.2.3 each tried a different Mac terminal (Apple Terminal → iTerm2 → WezTerm) and each failed at mixed Hebrew + English rendering. This release removes the broken-on-arrival Mac build path. Windows and Linux are unaffected.
+
+### Why deprecate
+
+After v1.2.3 (2026-05-02) shipped a bundled `wezterm.lua` with `bidi_enabled = true` + Kivun light-blue theme, user2 reinstalled and reported Hebrew still broken. Two parallel research tracks (codebase audit + 2026-05 web survey) confirmed:
+
+- **Apple Terminal** — has no BiDi engine. Paragraph alignment cannot be set. Verified by [Claude Code #34134](https://github.com/anthropics/claude-code/issues/34134).
+- **iTerm2 3.6.x** — BiDi engine mirrors Hebrew even with `BiDi=1` plist set + wrapper off. [GitLab #1611](https://gitlab.com/gnachman/iterm2/-/issues/1611) is the upstream tracking issue.
+- **WezTerm 20240127+** — direction detection works but character shaping does not for mixed scripts. See [wezterm#5423](https://github.com/wezterm/wezterm/discussions/5423) (Arabic letters don't join), [wezterm#6592](https://github.com/wezterm/wezterm/issues/6592). v1.2.3 was the first time we shipped this configuration; v1.2.3 was the test, and the test failed.
+- **Kitty / Alacritty / Foot** — no BiDi support. [kitty#2109](https://github.com/kovidgoyal/kitty/issues/2109), [alacritty#663](https://github.com/alacritty/alacritty/issues/663), [foot#756](https://codeberg.org/dnkl/foot/issues/756).
+- **"Ghostty RTL fork"** — does not exist as a maintained project. The community mirror (`commandlinetips/ghostty`) is a stale copy with zero original commits. Upstream Ghostty has accepted RTL [in principle](https://github.com/ghostty-org/ghostty/discussions/9774) but has not shipped it.
+- **Konsole on macOS via XQuartz** — would require ~600 MB Qt+KDE deps, has HiDPI/clipboard quirks; install footprint and reliability rule it out for a "double-click .pkg" UX.
+
+The honest position: as of 2026-05, **no native macOS terminal renders mixed Hebrew + English correctly inside Claude Code**. Shipping a Mac build that promises Hebrew but cannot deliver it is misleading. Kivun's identity is RTL — an English-only Mac build contradicts the project's reason to exist.
+
+### What's removed
+
+- `mac/build.sh`, `mac/scripts/postinstall`, `mac/scripts/wezterm.lua`, `mac/uninstall.sh`, and `mac/README.md` moved to `mac/_archive/` (preserved with full git history for any future revisit).
+- New `mac/README.md` written as a deprecation notice with uninstall pointer.
+- `.github/workflows/build-mac.yml` deleted. v1.2.4+ tag pushes will no longer trigger Mac builds; future releases will only attach `Kivun_Terminal_Setup.exe` + `kivun-terminal-linux-*.tar.gz`.
+- `kivun-claude-bidi/lib/detect-terminal.js`: `apple-terminal` removed from `KNOWN_TERMINALS` (it was added in v1.2.1; defense-in-depth on iTerm2/WezTerm rejection retained).
+- `kivun-claude-bidi/test/capability.test.js`: the `apple-terminal → ok` fixture is now an `apple-terminal → not ok` assertion.
+- Root `README.md`, `docs/README.md`, `docs/README_INSTALLATION.md`: capability matrix shows Mac as ❌. Platform badges no longer include macOS. Header tagline updated to "Windows and Linux."
+- `docs/TROUBLESHOOTING.md`: deprecation banner added. macOS-specific sections retained for users who need to diagnose or uninstall existing v1.2.x installs.
+
+### What's preserved
+
+- The existing **`Kivun_Terminal_Setup_mac.pkg` on the [v1.2.3 release page](https://github.com/noambrand/kivun-terminal-wsl/releases/tag/v1.2.3) stays downloadable** for users who installed it and may want to roll back. The release body has a deprecation banner edited in pointing at this v1.2.4 announcement.
+- `mac/_archive/uninstall.sh` is the script existing v1.2.x users should run to clean up: `sudo /usr/local/share/kivun-terminal/uninstall.sh` (already deployed by the v1.2.x postinstall to `/usr/local/share/kivun-terminal/`).
+- `kivun-claude-bidi` wrapper logic stays shipped in Linux + Windows builds. None of its core algorithm changes in v1.2.4.
+
+### Future re-evaluation
+
+We'll revisit macOS support when an upstream terminal ships verified working BiDi for mixed Hebrew + English. The most likely candidates are upstream Ghostty (no ship date set) and a future WezTerm release that fixes [#5423](https://github.com/wezterm/wezterm/discussions/5423). Track Ghostty's RTL effort at [discussion #9774](https://github.com/ghostty-org/ghostty/discussions/9774).
+
 ## [1.2.3] - 2026-05-02
 
 User2 reinstalled v1.2.2 on a clean Mac and reported: WezTerm did open (so the brew auto-install worked), but the window was the default dark theme — not the Kivun light-blue — and Hebrew rendered LTR-mirrored. Root cause: **WezTerm 20240127+ ships with `bidi_enabled = false` by default.** v1.2.2 invoked `wezterm start` with no `--config-file`, so the user got WezTerm's defaults: dark theme + BiDi off.

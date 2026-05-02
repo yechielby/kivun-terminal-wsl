@@ -1,79 +1,41 @@
-# Kivun Terminal - macOS Quickstart
+# Kivun Terminal — macOS support deprecated as of v1.2.4
 
-A macOS `.pkg` installer that bundles Claude Code with a Kivun-themed Terminal.app configuration and an Automator right-click entry in Finder.
+**Kivun Terminal no longer ships a macOS build.** v1.2.0 → v1.2.3 each tried a different Mac terminal (Apple Terminal → iTerm2 → WezTerm) and each failed at mixed Hebrew + English rendering. The category is broken: as of 2026-05, no native macOS terminal correctly renders bidirectional Hebrew+English text inside Claude Code.
 
-## What the installer does
+Verified failure points:
 
-1. Installs Xcode Command Line Tools (if missing).
-2. Installs Homebrew (if missing) - in `.pkg` non-TTY context, uses a self-cleaning temporary passwordless-sudo entry for the install only.
-3. Installs Node.js, Git, and Claude Code CLI (each skipped if already present).
-4. **Installs WezTerm** via `brew install --cask wezterm` (skipped if already present). WezTerm is the only macOS terminal in our matrix that can render Hebrew correctly - Apple Terminal lacks BiDi paragraph reordering, and iTerm2 3.6.x has a broken BiDi engine that mirrors Hebrew. The user does not have to install it manually.
-5. Drops a bundled WezTerm config at `/usr/local/share/kivun-terminal/wezterm.lua`. WezTerm 20240127+ supports BiDi but ships with `bidi_enabled = false`; this file enables it and applies the Kivun light-blue theme. Loaded by the launcher via `--config-file`, so your own `~/.config/wezterm/wezterm.lua` is left untouched. **v1.2.3.**
-6. Copies `statusline.mjs` to `/usr/local/share/kivun-terminal/statusline.mjs` and registers it in Claude Code's `~/.claude/settings.json`.
-7. Creates (or migrates) `~/Library/Application Support/Kivun-Terminal/config.txt` with `MAC_TERMINAL=wezterm` and `KIVUN_BIDI_WRAPPER=off` - the only combo that produces correct RTL on macOS. Pre-existing configs are backed up to `config.txt.bak.pre-v1.2.2` before being migrated.
-8. Deploys the **`kivun-claude-bidi` wrapper** to `/usr/local/share/kivun-terminal/kivun-claude-bidi/` and runs `npm install --production` once during postinstall (as the real user, so `node-pty` builds against your actual arch - Intel vs Apple Silicon). The wrapper is shipped but **not active by default** because WezTerm has native BiDi; the wrapper is reserved for users who manually switch to `MAC_TERMINAL=terminal`.
-9. Creates a desktop launcher `~/Desktop/Kivun Terminal.command` that pops a Finder folder picker and launches Claude Code inside WezTerm (via `wezterm --config-file ... start --cwd`).
-10. Installs a Finder Quick Action at `~/Library/Services/Open with Kivun Terminal.workflow` so you can right-click any folder → Services → "Open with Kivun Terminal".
+- **Apple Terminal** — has no BiDi engine. Paragraph direction cannot be set; Hebrew runs render LTR.
+- **iTerm2 3.6.x** — BiDi engine mirrors Hebrew even with `BiDi=1` plist set. See [Claude Code #34134](https://github.com/anthropics/claude-code/issues/34134).
+- **WezTerm 20240127+** — `bidi_enabled = true` detects direction but [character shaping is broken](https://github.com/wezterm/wezterm/discussions/5423). Mixed Hebrew+English does not render correctly.
+- **Kitty / Alacritty / Foot** — no BiDi support shipped. See [kitty #2109](https://github.com/kovidgoyal/kitty/issues/2109), [alacritty #663](https://github.com/alacritty/alacritty/issues/663), [foot #756](https://codeberg.org/dnkl/foot/issues/756).
+- **"Ghostty RTL fork"** — does not exist as a maintained project. The GitHub mirror sometimes referenced is a stale copy with zero original commits. Upstream Ghostty has accepted RTL [in principle](https://github.com/ghostty-org/ghostty/discussions/9774) but has not shipped it.
 
-## Install
+For Hebrew (or any RTL language) work with Claude Code today, use the **Linux** or **Windows** builds — both render correctly via Konsole. See the [root README](../README.md) for downloads.
 
-Download `Kivun_Terminal_Setup_mac.pkg` from the [latest GitHub release](https://github.com/noambrand/kivun-terminal-wsl/releases/latest).
+We will re-evaluate macOS when an upstream terminal ships verified working BiDi for mixed scripts. Track that effort at the [Ghostty RTL discussions](https://github.com/ghostty-org/ghostty/discussions/9774).
 
-The installer is currently unsigned, so macOS blocks it on first attempt. Bypass:
+## Uninstalling a v1.2.x macOS install
 
-1. Double-click the downloaded `.pkg` file (usually in Downloads).
-2. Close the security warning dialog.
-3. Click the Apple menu ( in the top-left corner of your screen) → **System Settings** → **Privacy & Security**.
-4. Scroll down and click **Allow Anyway** next to the blocked app.
-5. Double-click the `.pkg` again to run the installer.
-
-macOS will ask for your admin password during install — that's normal (the installer needs to install Homebrew and Claude Code system-wide).
-
-Install log lives at `/tmp/kivun_install.log` - check there if something goes wrong.
-
-## Config file
-
-`~/Library/Application Support/Kivun-Terminal/config.txt`:
-
-- `RESPONSE_LANGUAGE` - one of 23 values (english, hebrew, arabic, persian, urdu, kurdish, pashto, sindhi, yiddish, syriac, dhivehi, nko, adlam, mandaic, samaritan, dari, uyghur, balochi, kashmiri, shahmukhi, azeri-south, jawi, turoyo)
-- `MAC_TERMINAL` - `wezterm` (default; auto-installed by the .pkg), `terminal`, or `iterm2`. Apple Terminal cannot do RTL paragraph alignment and iTerm2 3.6.x's BiDi is broken; only WezTerm renders Hebrew correctly.
-- `TERMINAL_COLOR` - `kivun` (light-blue theme applied via osascript) or `default`
-- `FOLDER_PICKER` - `true` (default on macOS; shortcut pops a folder picker) or `false`
-- `CLAUDE_FLAGS` - optional flags passed to every `claude` invocation (e.g. `--continue`)
-- `KIVUN_BIDI_WRAPPER` - `off` (default). Set to `on` only if you've also set `MAC_TERMINAL=terminal` (Apple Terminal). On WezTerm/iTerm2 the wrapper would double-apply BiDi marks and mirror Hebrew.
-
-## Build from source
-
-Requires macOS with Xcode Command Line Tools.
-
-```bash
-chmod +x mac/build.sh
-./mac/build.sh            # uses version from VERSION file
-./mac/build.sh 1.0.6      # explicit version
-```
-
-Output: `build/Kivun_Terminal_Setup_mac.pkg`.
-
-## Uninstall
+If you previously installed `Kivun_Terminal_Setup_mac.pkg` (v1.2.0–v1.2.3), remove it with:
 
 ```bash
 sudo /usr/local/share/kivun-terminal/uninstall.sh
 ```
 
-Or from the source repo:
+If that script is missing, download a copy from `mac/_archive/uninstall.sh` in this repository.
 
-```bash
-./mac/uninstall.sh
-```
+The uninstaller removes the desktop shortcut, the Finder Quick Action, the `/usr/local/share/kivun-terminal/` tree, and the `com.kivun.terminal` pkg receipt. It deliberately leaves Homebrew, Node.js, Git, Claude Code, and (if installed by v1.2.2/v1.2.3) WezTerm in place — remove those manually if desired.
 
-Removes the desktop shortcut, the Finder Quick Action, the shell-rc `CLAUDE_CODE_STATUSLINE` export, the Kivun statusLine entry from `~/.claude/settings.json`, the `/usr/local/share/kivun-terminal/` tree, and the `com.kivun.terminal` pkg receipt. Prompts before removing the config file. Leaves Homebrew, Node, Git, and Claude Code in place - remove those yourself if desired.
+## What's archived under `mac/_archive/`
 
-## CI build
+The v1.2.3 source is preserved under `mac/_archive/` for reference and for the rare user who wants to keep building from the deprecated path. None of these files are included in v1.2.4+ releases.
 
-`.github/workflows/build-mac.yml` builds the `.pkg` on `macos-latest` on every tag push (`v*`) and on manual workflow dispatch. It uploads the `.pkg` as a workflow artifact, and on tag push also attaches it to the GitHub Release.
+- `_archive/scripts/postinstall` — the v1.2.3 .pkg postinstall (auto-installed WezTerm + bundled wezterm.lua)
+- `_archive/scripts/wezterm.lua` — the v1.2.3 WezTerm config (bidi_enabled=true + Kivun light-blue theme)
+- `_archive/build.sh` — the v1.2.3 .pkg builder
+- `_archive/uninstall.sh` — uninstall script (still works on v1.2.x installs)
+- `_archive/README.md` — the v1.2.3 mac/README
 
-## Known limitations
+## Rolling back to v1.2.3
 
-- **Hebrew RTL on macOS requires WezTerm.** Apple Terminal cannot do RTL paragraph alignment at all (no BiDi engine). iTerm2 3.6.x has a broken BiDi engine that mirrors Hebrew. Only WezTerm renders Hebrew correctly, which is why the .pkg auto-installs it and sets `MAC_TERMINAL=wezterm` as the default. If you choose to use Apple Terminal, the bundled `kivun-claude-bidi` wrapper still helps with the bullet-line direction bug ([anthropics/claude-code#39881](https://github.com/anthropics/claude-code/issues/39881)) but RTL paragraph alignment will not work.
-- **Code-signing / notarization** - the `.pkg` is currently unsigned, so macOS Gatekeeper blocks it on first run. See the [Install](#install) section above for the System Settings → Privacy & Security bypass.
-- **Intel vs Apple Silicon** - the postinstall auto-detects `uname -m` and installs Homebrew at `/opt/homebrew` (arm64) or `/usr/local/Homebrew` (x86_64).
+The `Kivun_Terminal_Setup_mac.pkg` from the v1.2.3 GitHub Release is preserved for users who want to keep using the deprecated build (with its known Hebrew rendering issues). See the [v1.2.3 release page](https://github.com/noambrand/kivun-terminal-wsl/releases/tag/v1.2.3) — note the deprecation banner there.
