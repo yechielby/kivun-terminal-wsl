@@ -3,6 +3,54 @@
 All notable changes to Kivun Terminal are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.2] - 2026-05-02
+
+Hebrew on macOS now works out of the box, with **zero manual install steps and zero config edits**. Driven by `kivun-terminal-rtl-debug.v2.md` (a user-driven investigation of why v1.2.1's RTL "fix" still rendered LTR).
+
+### What was wrong in v1.2.1
+
+- v1.2.1 widened the BiDi wrapper allowlist to accept Apple Terminal, iTerm2, and WezTerm — but iTerm2 and WezTerm have native BiDi engines. Running the wrapper on top of native BiDi double-applies the RLE/PDF marks and Hebrew comes out **mirrored**, exactly the symptom one user reported.
+- Apple Terminal cannot do RTL paragraph alignment at all (no BiDi engine). The default `MAC_TERMINAL=terminal` silently shipped a broken-out-of-the-box RTL experience.
+- iTerm2 3.6.x's BiDi is broken even with the wrapper off — confirmed empirically by setting `BiDi=1` directly on the profile plist.
+- The `wezterm)` branch of the desktop launcher only opened WezTerm in the folder; it never invoked claude.
+
+### Fixed: zero-config WezTerm install
+
+`mac/scripts/postinstall` now:
+
+- Auto-installs WezTerm via `brew install --cask wezterm` (skipped if already installed). WezTerm is the only macOS terminal in our matrix that renders Hebrew correctly.
+- Force-sets `MAC_TERMINAL=wezterm` and `KIVUN_BIDI_WRAPPER=off` for both new and existing configs. Existing configs are backed up to `config.txt.bak.pre-v1.2.2` first so users can recover any custom edits. Other keys (`RESPONSE_LANGUAGE`, `TERMINAL_COLOR`, etc.) are preserved.
+- Heredoc defaults flipped: new installs ship with `MAC_TERMINAL=wezterm` + `KIVUN_BIDI_WRAPPER=off`.
+
+### Fixed: BiDi wrapper rejects native-BiDi terminals
+
+`kivun-claude-bidi/lib/detect-terminal.js` now keeps Konsole + Apple Terminal in the allowlist but explicitly rejects iTerm2 and WezTerm with a clear error message including a `nativeBidi: true` flag. The error reason names the terminal and tells the launcher to set `KIVUN_BIDI_WRAPPER=off`. Defense-in-depth: even if a user manually flips the wrapper on, the wrapper itself refuses where it would mirror Hebrew.
+
+### Fixed: WezTerm launch path actually launches claude
+
+The desktop launcher's `wezterm)` case now invokes `wezterm start --cwd "$FOLDER" -- "$CLAUDE_EXEC" --append-system-prompt "$LANG_PROMPT" $CLAUDE_FLAGS`. Resolves `wezterm` from `$PATH` first, then falls back to `/opt/homebrew/bin/wezterm`, `/usr/local/bin/wezterm`, and `/Applications/WezTerm.app/Contents/MacOS/wezterm` so the launcher works on Apple Silicon, Intel, and unusual install layouts.
+
+### Fixed: launcher gates wrapper on `MAC_TERMINAL=terminal`
+
+In the desktop `.command`, the wrapper is now selected as `CLAUDE_EXEC` only when `KIVUN_BIDI_WRAPPER=on` AND `MAC_TERMINAL=terminal`. On WezTerm or iTerm2 the launcher falls back to plain `claude` regardless of the user's wrapper toggle — preventing double-application even if a stale config somehow has the wrapper on.
+
+### Fixed: stale comments in `bin/kivun-claude-bidi`
+
+- The `KIVUN_BIDI_FORCE` description is rewritten to reflect that macOS terminals are now in the allowlist (and that two of them are intentionally rejected).
+- Removed unreachable "node-pty integration is pending — run with `KIVUN_BIDI_WRAPPER=off` to disable this wrapper until v1.1.0 ships" error block. `lib/wrapper.js` does load and run; the previous text was dead.
+- The fallback exit-2 message now points users at `KIVUN_BIDI_WRAPPER=off` instead of stating the wrapper is a stub.
+
+### Documentation
+
+- `mac/README.md`: WezTerm-is-default and the why explained up front; config-key descriptions updated; Known Limitations rewritten to surface that Apple Terminal cannot do RTL alignment.
+- Root `README.md`: macOS section adds an italic note that the .pkg auto-installs WezTerm, so RTL works without manual intervention.
+- `kivun-terminal-rtl-debug.v2.md` checked into the repo root as the source-of-record for this fix.
+
+### Known limitations not addressed in v1.2.2
+
+- The `.command` file is always opened by Apple Terminal on double-click, so users on `MAC_TERMINAL=wezterm` still see a one-second Apple Terminal flash before the launcher hands off to WezTerm. Cleaning this up needs an `.app` bundle or LaunchServices binding. Tracked for a future release.
+- iTerm2 is still selectable via `MAC_TERMINAL=iterm2` in the launcher, even though we've found 3.6.x's BiDi broken. Left in because some users may have a working older or custom build, and the cost of removing the branch is higher than the cost of letting users opt in.
+
 ## [1.2.1] - 2026-05-01
 
 Mac RTL fix: the BiDi wrapper now actually engages on macOS Apple Terminal / iTerm2 / WezTerm. Per the brief in `MAC_RTL_FIX_BRIEF.md`.

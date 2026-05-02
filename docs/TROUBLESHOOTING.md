@@ -1,4 +1,4 @@
-# Kivun Terminal v1.2.1 - Troubleshooting
+# Kivun Terminal v1.2.2 - Troubleshooting
 
 ## First: collect the logs
 

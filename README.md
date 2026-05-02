@@ -14,7 +14,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License"></a>
-  <img src="https://img.shields.io/badge/version-1.2.1-brightgreen" alt="v1.2.1">
+  <img src="https://img.shields.io/badge/version-1.2.2-brightgreen" alt="v1.2.2">
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey" alt="Platform">
   <img src="https://img.shields.io/badge/RTL%20languages-11-orange" alt="11 RTL Languages">
   <a href="https://github.com/noambrand/kivun-terminal-wsl/releases/latest"><img src="https://img.shields.io/github/downloads/noambrand/kivun-terminal-wsl/total?color=purple&label=downloads" alt="Total Downloads"></a>
@@ -47,7 +47,7 @@
 
 ## Why Kivun Terminal?
 
-|  | Launchpad CLI v2.4.2 | Kivun Terminal v1.2.1 |
+|  | Launchpad CLI v2.4.2 | Kivun Terminal v1.2.2 |
 |---|---|---|
 | **Runtime (Windows)** | Windows Terminal (native) | WSL2 + Ubuntu + Konsole |
 | **RTL/BiDi rendering** | LTR only (Windows Terminal has no BiDi engine) | ✅ Full RTL + line-start RLM fix for Claude's bullet-line direction bug ([anthropics/claude-code#39881](https://github.com/anthropics/claude-code/issues/39881)) |
@@ -88,6 +88,8 @@ Supports apt (Debian/Ubuntu), dnf (Fedora/RHEL), pacman (Arch/Manjaro), zypper (
 1. **[Download `Kivun_Terminal_Setup_mac.pkg`](https://github.com/noambrand/kivun-terminal-wsl/releases/latest)**
 2. Double-click the `.pkg` to install. The installer is unsigned, so macOS blocks it on first attempt — follow the **Installing an unsigned .pkg** steps below.
 3. Use the **Kivun Terminal** desktop shortcut or right-click a folder → **Services → Open with Kivun Terminal**.
+
+> **macOS RTL note:** Apple Terminal cannot do RTL paragraph alignment, and iTerm2 3.6.x mirrors Hebrew. The `.pkg` auto-installs **WezTerm** (the only macOS terminal that renders Hebrew correctly out of the box) and sets it as the default — no manual config needed.
 
 #### Installing an unsigned .pkg / התקנת קובץ .pkg לא חתום
 

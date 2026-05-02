@@ -210,6 +210,26 @@ else
     log "Claude Code already installed — skipping"
 fi
 
+# --- WezTerm (auto-installed for correct macOS RTL) ---
+# WezTerm is the only macOS terminal in our matrix that renders Hebrew
+# correctly out of the box. Apple Terminal lacks BiDi paragraph
+# reordering, and iTerm2 3.6.x has a broken BiDi engine that mirrors
+# Hebrew. WezTerm has native BiDi on by default. The .pkg installs it
+# via brew --cask so users don't have to do it manually.
+# Reference: kivun-terminal-rtl-debug.v2.md §2.2, §3, §7.
+log "Checking WezTerm..."
+if [ -d "/Applications/WezTerm.app" ] || run_as_user "command -v wezterm" &>/dev/null; then
+    log "WezTerm already installed — skipping"
+else
+    log "Installing WezTerm via Homebrew (one-time, ~30-60s)..."
+    if run_as_user "brew install --cask wezterm" 2>&1 | tee -a "$LOG_FILE" >/dev/null; then
+        log "WezTerm installed at /Applications/WezTerm.app"
+    else
+        log "WARNING: WezTerm install failed — RTL rendering will be limited."
+        log "  Recover with:  brew install --cask wezterm"
+    fi
+fi
+
 # --- Statusline (with SHA256 integrity check) ---
 STATUSLINE_DIR="/usr/local/share/kivun-terminal"
 STATUSLINE_SRC="$(dirname "$0")/statusline.mjs"
@@ -369,15 +389,16 @@ RESPONSE_LANGUAGE=english
 # =================================================================
 # TERMINAL EMULATOR (macOS-only)
 # =================================================================
-# Options: terminal (Terminal.app, default; macOS built-in)
-#          iterm2   (iTerm2 — better BiDi/RTL rendering, if installed)
-#          wezterm  (WezTerm — strongest Unicode/BiDi support)
+# Options: wezterm  (auto-installed by the .pkg — RECOMMENDED; the only
+#                    macOS terminal in our matrix that renders Hebrew
+#                    correctly out of the box)
+#          terminal (Apple Terminal — cannot do RTL paragraph alignment;
+#                    BiDi wrapper helps with the bullet-line bug only)
+#          iterm2   (iTerm2 — its BiDi is broken in 3.6.x; not recommended)
 #
-# Terminal.app has weaker BiDi than Konsole. If you work in Hebrew,
-# Arabic, Persian, or any RTL language, install iTerm2 or WezTerm
-# and set this to match. See docs/TROUBLESHOOTING.md.
-# Default: terminal
-MAC_TERMINAL=terminal
+# See docs/TROUBLESHOOTING.md and kivun-terminal-rtl-debug.v2.md.
+# Default: wezterm
+MAC_TERMINAL=wezterm
 
 # =================================================================
 # TERMINAL COLOR THEME
@@ -405,17 +426,19 @@ CLAUDE_FLAGS=
 # =================================================================
 # BIDI WRAPPER (Hebrew rendering for Claude Code output)
 # =================================================================
-# When "on" (default), Claude Code output is piped through the
-# kivun-claude-bidi wrapper, which injects Unicode RLE/PDF bracket
-# pairs around Hebrew runs and an RLM at line start when the first
-# strong char is RTL — fixing the Hebrew bullet-line direction bug
-# regardless of which terminal emulator you're using.
+# The wrapper injects Unicode RLE/PDF bracket pairs around Hebrew
+# runs and an RLM at line start. It exists for terminals that LACK
+# native BiDi (Konsole on Linux, Apple Terminal on macOS).
 #
-# The .pkg deploys the wrapper to /usr/local/share/kivun-terminal/
-# kivun-claude-bidi/ and runs npm install once during postinstall. Set
-# to "off" to fall back to unwrapped claude.
-# Default: on
-KIVUN_BIDI_WRAPPER=on
+# WezTerm has native BiDi — running the wrapper there causes
+# double-application and Hebrew comes out mirrored. So when
+# MAC_TERMINAL=wezterm (the default), the wrapper MUST be off.
+#
+# Set to "on" only if MAC_TERMINAL=terminal (Apple Terminal) AND
+# you want the bullet-line RLM injection. RTL paragraph alignment
+# is not achievable in Apple Terminal regardless.
+# Default: off (because default MAC_TERMINAL is wezterm)
+KIVUN_BIDI_WRAPPER=off
 
 # =================================================================
 # Not used on macOS: USE_VCXSRV (Windows/WSL only)
@@ -424,38 +447,55 @@ CONFIG
     chown "$REAL_USER" "$CONFIG_FILE"
     log "Configuration file created at $CONFIG_FILE"
 else
-    # Existing config from a prior install. Don't overwrite — users may
-    # have hand-edited values. But DO append any keys that were added in
-    # later versions and are missing here, so users don't end up with a
-    # config that silently lacks newer toggles (e.g. KIVUN_BIDI_WRAPPER
-    # was added after the initial v1.0 release).
-    log "Configuration file already exists — checking for missing keys"
-    migrated=0
+    # v1.2.2 migration: force the BiDi-correct combo (MAC_TERMINAL=wezterm,
+    # KIVUN_BIDI_WRAPPER=off) regardless of existing values. v1.2.1 and
+    # earlier shipped MAC_TERMINAL=terminal as default, which cannot do RTL
+    # paragraph alignment; users who manually picked MAC_TERMINAL=iterm2
+    # also ended up broken (iTerm2 3.6.x BiDi is unreliable). The only
+    # config that produces correct Hebrew is wezterm + wrapper off.
+    # Backup the user's existing config so any custom edits are recoverable.
+    log "Migrating existing config to v1.2.2 BiDi-correct defaults"
+    BACKUP="${CONFIG_FILE}.bak.pre-v1.2.2"
+    if [ ! -f "$BACKUP" ]; then
+        cp "$CONFIG_FILE" "$BACKUP"
+        chown "$REAL_USER" "$BACKUP"
+        log "  backed up prior config to $BACKUP"
+    fi
+
+    # Force-correct values for keys we know must be specific, regardless
+    # of any prior user choice (the prior choices were all broken).
+    set_canonical_value() {
+        local key="$1"
+        local target_value="$2"
+        if grep -qE "^[[:space:]]*${key}=" "$CONFIG_FILE"; then
+            awk -v k="$key" -v v="$target_value" '
+                $0 ~ "^[[:space:]]*"k"=" { print k"="v; next }
+                { print }
+            ' "$CONFIG_FILE" > "${CONFIG_FILE}.tmp" && mv "${CONFIG_FILE}.tmp" "$CONFIG_FILE"
+            log "  forced ${key}=${target_value}"
+        else
+            { echo ""; echo "${key}=${target_value}"; } >> "$CONFIG_FILE"
+            log "  appended ${key}=${target_value}"
+        fi
+    }
+    set_canonical_value "MAC_TERMINAL" "wezterm"
+    set_canonical_value "KIVUN_BIDI_WRAPPER" "off"
+
+    # For keys that are user-preference (color/language/etc), only add if
+    # missing — preserve existing user choices.
     add_missing_key() {
         local key="$1"
         local default_value="$2"
-        local comment="$3"
         if ! grep -qE "^[[:space:]]*${key}=" "$CONFIG_FILE"; then
-            {
-                echo ""
-                echo "# $comment"
-                echo "${key}=${default_value}"
-            } >> "$CONFIG_FILE"
-            log "  added missing key: ${key}=${default_value}"
-            migrated=$((migrated + 1))
+            { echo ""; echo "${key}=${default_value}"; } >> "$CONFIG_FILE"
+            log "  added missing ${key}=${default_value}"
         fi
     }
-    add_missing_key "KIVUN_BIDI_WRAPPER" "on"  "RTL handling for Hebrew/Arabic/etc. on (default) or off."
-    add_missing_key "MAC_TERMINAL"       "terminal" "Terminal emulator: terminal, iterm2, or wezterm."
-    add_missing_key "TERMINAL_COLOR"     "kivun"    "Terminal color: kivun (light-blue theme) or default."
-    add_missing_key "FOLDER_PICKER"      "true"     "Pop a folder picker on launch: true or false."
-    add_missing_key "CLAUDE_FLAGS"       ""         "Optional flags appended to every claude invocation (e.g. --continue)."
-    if [ "$migrated" -gt 0 ]; then
-        chown "$REAL_USER" "$CONFIG_FILE"
-        log "Migrated $migrated missing key(s) into $CONFIG_FILE"
-    else
-        log "No missing keys — config is current"
-    fi
+    add_missing_key "RESPONSE_LANGUAGE" "english"
+    add_missing_key "TERMINAL_COLOR"    "kivun"
+    add_missing_key "FOLDER_PICKER"     "true"
+    add_missing_key "CLAUDE_FLAGS"      ""
+    chown "$REAL_USER" "$CONFIG_FILE"
 fi
 
 # --- Desktop Shortcut with Folder Picker ---
@@ -477,10 +517,10 @@ export CLAUDE_CODE_STATUSLINE="$STATUSLINE_DIR/statusline.mjs"
 # Read configuration
 RESPONSE_LANGUAGE="english"
 TERMINAL_COLOR="kivun"
-MAC_TERMINAL="terminal"
+MAC_TERMINAL="wezterm"
 FOLDER_PICKER="true"
 CLAUDE_FLAGS=""
-KIVUN_BIDI_WRAPPER="on"
+KIVUN_BIDI_WRAPPER="off"
 # Pure-bash trim avoids xargs's glob expansion and quote stripping —
 # a value like `*` or `?` must pass through unchanged.
 trim() {
@@ -508,11 +548,12 @@ if [ -f "$CONFIG_FILE" ]; then
     done < "$CONFIG_FILE"
 fi
 
-# Decide which binary to run. The wrapper, if installed and on, fixes the
-# Hebrew bullet-line direction bug regardless of which terminal emulator
-# you use. Falls back silently to plain `claude` when missing/disabled.
+# Decide which binary to run. The BiDi wrapper helps only on terminals
+# that LACK native BiDi (Apple Terminal). On WezTerm/iTerm2 it would
+# double-apply marks and mirror Hebrew, so it must be skipped there even
+# if the user manually flipped KIVUN_BIDI_WRAPPER=on.
 CLAUDE_EXEC="claude"
-if [ "$KIVUN_BIDI_WRAPPER" = "on" ]; then
+if [ "$KIVUN_BIDI_WRAPPER" = "on" ] && [ "$MAC_TERMINAL" = "terminal" ]; then
     WRAPPER_BIN="/usr/local/share/kivun-terminal/kivun-claude-bidi/bin/kivun-claude-bidi"
     if [ -x "$WRAPPER_BIN" ]; then
         CLAUDE_EXEC="$WRAPPER_BIN"
@@ -612,8 +653,35 @@ end tell
 OSASCRIPT
         ;;
     wezterm)
-        open -a WezTerm "$FOLDER" 2>/dev/null
-        exit 0
+        # WezTerm has native BiDi — claude runs directly, no wrapper.
+        # The CLI ships alongside the .app via brew --cask wezterm; the
+        # Apple Silicon brew prefix is /opt/homebrew, Intel is /usr/local.
+        WEZTERM_BIN=""
+        if command -v wezterm >/dev/null 2>&1; then
+            WEZTERM_BIN="wezterm"
+        elif [ -x "/opt/homebrew/bin/wezterm" ]; then
+            WEZTERM_BIN="/opt/homebrew/bin/wezterm"
+        elif [ -x "/usr/local/bin/wezterm" ]; then
+            WEZTERM_BIN="/usr/local/bin/wezterm"
+        elif [ -x "/Applications/WezTerm.app/Contents/MacOS/wezterm" ]; then
+            WEZTERM_BIN="/Applications/WezTerm.app/Contents/MacOS/wezterm"
+        fi
+        if [ -n "$WEZTERM_BIN" ]; then
+            if [ -n "$LANG_PROMPT" ]; then
+                "$WEZTERM_BIN" start --cwd "$FOLDER" -- "$CLAUDE_EXEC" --append-system-prompt "$LANG_PROMPT" $CLAUDE_FLAGS &
+            else
+                "$WEZTERM_BIN" start --cwd "$FOLDER" -- "$CLAUDE_EXEC" $CLAUDE_FLAGS &
+            fi
+            disown 2>/dev/null || true
+            exit 0
+        fi
+        # WezTerm not installed (postinstall should have done it, but the
+        # brew install can fail on offline / restricted machines). Fall
+        # through to the default Apple Terminal path so the user still
+        # gets claude — RTL will be limited.
+        echo "WARNING: WezTerm CLI not found; falling back to Apple Terminal."
+        echo "  Recover with:  brew install --cask wezterm"
+        echo ""
         ;;
 esac
 

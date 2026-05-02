@@ -63,20 +63,21 @@ describe('detect-terminal fixtures', () => {
     assert.equal(res.profile, '455.1');
   });
 
-  it('TERM_PROGRAM=iTerm.app → ok with iterm2 name', () => {
-    const res = detectTerminal({
-      TERM_PROGRAM: 'iTerm.app',
-      TERM_PROGRAM_VERSION: '3.5.0',
-    });
-    assert.equal(res.ok, true);
+  it('TERM_PROGRAM=iTerm.app → REJECTED (native BiDi double-applies)', () => {
+    const res = detectTerminal({ TERM_PROGRAM: 'iTerm.app' });
+    assert.equal(res.ok, false);
+    assert.equal(res.nativeBidi, true);
     assert.equal(res.name, 'iterm2');
-    assert.equal(res.profile, '3.5.0');
+    assert.match(res.reason, /native BiDi/);
+    assert.match(res.reason, /KIVUN_BIDI_WRAPPER=off/);
   });
 
-  it('TERM_PROGRAM=WezTerm → ok with wezterm name', () => {
+  it('TERM_PROGRAM=WezTerm → REJECTED (native BiDi double-applies)', () => {
     const res = detectTerminal({ TERM_PROGRAM: 'WezTerm' });
-    assert.equal(res.ok, true);
+    assert.equal(res.ok, false);
+    assert.equal(res.nativeBidi, true);
     assert.equal(res.name, 'wezterm');
+    assert.match(res.reason, /native BiDi/);
   });
 
   it('empty env → not ok', () => {
