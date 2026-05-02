@@ -128,6 +128,27 @@ jobs:
             || (echo "Launcher heredoc lost its kivun-claude-bidi reference"; exit 1)
           echo "Launcher references the BiDi wrapper ✓"
 
+      - name: Verify WezTerm config staged + launcher loads it
+        # v1.2.3 ships /usr/local/share/kivun-terminal/wezterm.lua. Without
+        # it, WezTerm runs with bidi_enabled=false and Hebrew comes out
+        # mirrored — exactly the v1.2.2 regression we're fixing here. Hard
+        # fail if either the file or the launcher's --config-file invocation
+        # is missing.
+        run: |
+          test -f build/scripts/wezterm.lua \
+            || (echo "wezterm.lua not staged into build/scripts/"; exit 1)
+          grep -qF 'bidi_enabled = true' build/scripts/wezterm.lua \
+            || (echo "wezterm.lua missing bidi_enabled=true"; exit 1)
+          grep -qF '#C8E6FF' build/scripts/wezterm.lua \
+            || (echo "wezterm.lua missing Kivun light-blue color"; exit 1)
+          test -f build/extracted-pkg/Scripts/wezterm.lua \
+            || (echo ".pkg expansion: wezterm.lua not present in Scripts/"; exit 1)
+          POSTINSTALL=$(find build/extracted-pkg -name 'postinstall' | head -1)
+          awk "/cat > \"\\\$SHORTCUT_PATH\" << 'SCRIPT'/,/^SCRIPT\$/" "$POSTINSTALL" \
+            | grep -qF -- '--config-file "$WEZTERM_LUA"' \
+            || (echo "Launcher heredoc does not load wezterm.lua via --config-file"; exit 1)
+          echo "WezTerm config + launcher integration ✓"
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:

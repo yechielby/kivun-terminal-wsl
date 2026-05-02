@@ -7,12 +7,13 @@ A macOS `.pkg` installer that bundles Claude Code with a Kivun-themed Terminal.a
 1. Installs Xcode Command Line Tools (if missing).
 2. Installs Homebrew (if missing) - in `.pkg` non-TTY context, uses a self-cleaning temporary passwordless-sudo entry for the install only.
 3. Installs Node.js, Git, and Claude Code CLI (each skipped if already present).
-4. **Installs WezTerm** via `brew install --cask wezterm` (skipped if already present). WezTerm is the only macOS terminal in our matrix that renders Hebrew correctly out of the box - Apple Terminal lacks BiDi paragraph reordering, and iTerm2 3.6.x has a broken BiDi engine that mirrors Hebrew. The user does not have to install it manually.
-5. Copies `statusline.mjs` to `/usr/local/share/kivun-terminal/statusline.mjs` and registers it in Claude Code's `~/.claude/settings.json`.
-6. Creates (or migrates) `~/Library/Application Support/Kivun-Terminal/config.txt` with `MAC_TERMINAL=wezterm` and `KIVUN_BIDI_WRAPPER=off` - the only combo that produces correct RTL on macOS. Pre-existing configs are backed up to `config.txt.bak.pre-v1.2.2` before being migrated.
-7. Deploys the **`kivun-claude-bidi` wrapper** to `/usr/local/share/kivun-terminal/kivun-claude-bidi/` and runs `npm install --production` once during postinstall (as the real user, so `node-pty` builds against your actual arch - Intel vs Apple Silicon). The wrapper is shipped but **not active by default** because WezTerm has native BiDi; the wrapper is reserved for users who manually switch to `MAC_TERMINAL=terminal`.
-8. Creates a desktop launcher `~/Desktop/Kivun Terminal.command` that pops a Finder folder picker and launches Claude Code inside WezTerm (via `wezterm start --cwd`).
-9. Installs a Finder Quick Action at `~/Library/Services/Open with Kivun Terminal.workflow` so you can right-click any folder → Services → "Open with Kivun Terminal".
+4. **Installs WezTerm** via `brew install --cask wezterm` (skipped if already present). WezTerm is the only macOS terminal in our matrix that can render Hebrew correctly - Apple Terminal lacks BiDi paragraph reordering, and iTerm2 3.6.x has a broken BiDi engine that mirrors Hebrew. The user does not have to install it manually.
+5. Drops a bundled WezTerm config at `/usr/local/share/kivun-terminal/wezterm.lua`. WezTerm 20240127+ supports BiDi but ships with `bidi_enabled = false`; this file enables it and applies the Kivun light-blue theme. Loaded by the launcher via `--config-file`, so your own `~/.config/wezterm/wezterm.lua` is left untouched. **v1.2.3.**
+6. Copies `statusline.mjs` to `/usr/local/share/kivun-terminal/statusline.mjs` and registers it in Claude Code's `~/.claude/settings.json`.
+7. Creates (or migrates) `~/Library/Application Support/Kivun-Terminal/config.txt` with `MAC_TERMINAL=wezterm` and `KIVUN_BIDI_WRAPPER=off` - the only combo that produces correct RTL on macOS. Pre-existing configs are backed up to `config.txt.bak.pre-v1.2.2` before being migrated.
+8. Deploys the **`kivun-claude-bidi` wrapper** to `/usr/local/share/kivun-terminal/kivun-claude-bidi/` and runs `npm install --production` once during postinstall (as the real user, so `node-pty` builds against your actual arch - Intel vs Apple Silicon). The wrapper is shipped but **not active by default** because WezTerm has native BiDi; the wrapper is reserved for users who manually switch to `MAC_TERMINAL=terminal`.
+9. Creates a desktop launcher `~/Desktop/Kivun Terminal.command` that pops a Finder folder picker and launches Claude Code inside WezTerm (via `wezterm --config-file ... start --cwd`).
+10. Installs a Finder Quick Action at `~/Library/Services/Open with Kivun Terminal.workflow` so you can right-click any folder → Services → "Open with Kivun Terminal".
 
 ## Install
 

@@ -266,6 +266,21 @@ else
     log "WARNING: languages.sh not found in package — skipping"
 fi
 
+# --- WezTerm config (Kivun-bundled — enables BiDi + light-blue theme) ---
+# WezTerm 20240127+ supports BiDi but ships with bidi_enabled=false. Without
+# this config the v1.2.2 Mac install opened a default-themed (dark) WezTerm
+# window and rendered Hebrew LTR-mirrored. Loaded by the launcher via
+# `wezterm --config-file`, which leaves the user's own ~/.config/wezterm/
+# wezterm.lua untouched. v1.2.3.
+WEZTERM_LUA_SRC="$(dirname "$0")/wezterm.lua"
+if [ -f "$WEZTERM_LUA_SRC" ]; then
+    cp "$WEZTERM_LUA_SRC" "$STATUSLINE_DIR/wezterm.lua"
+    chmod 644 "$STATUSLINE_DIR/wezterm.lua"
+    log "WezTerm config copied to $STATUSLINE_DIR/wezterm.lua"
+else
+    log "WARNING: wezterm.lua not found in package — WezTerm will use default config (BiDi off, dark theme)"
+fi
+
 # --- Uninstaller ---
 UNINSTALL_SRC="$(dirname "$0")/uninstall.sh"
 if [ -f "$UNINSTALL_SRC" ]; then
@@ -653,7 +668,11 @@ end tell
 OSASCRIPT
         ;;
     wezterm)
-        # WezTerm has native BiDi — claude runs directly, no wrapper.
+        # WezTerm has native BiDi BUT ships with bidi_enabled=false. Our
+        # bundled wezterm.lua at /usr/local/share/kivun-terminal/wezterm.lua
+        # enables BiDi AND applies the Kivun light-blue theme. Loaded via
+        # --config-file so the user's own ~/.config/wezterm/wezterm.lua is
+        # left untouched and applies to non-Kivun WezTerm sessions.
         # The CLI ships alongside the .app via brew --cask wezterm; the
         # Apple Silicon brew prefix is /opt/homebrew, Intel is /usr/local.
         WEZTERM_BIN=""
@@ -667,10 +686,22 @@ OSASCRIPT
             WEZTERM_BIN="/Applications/WezTerm.app/Contents/MacOS/wezterm"
         fi
         if [ -n "$WEZTERM_BIN" ]; then
-            if [ -n "$LANG_PROMPT" ]; then
-                "$WEZTERM_BIN" start --cwd "$FOLDER" -- "$CLAUDE_EXEC" --append-system-prompt "$LANG_PROMPT" $CLAUDE_FLAGS &
+            WEZTERM_LUA="/usr/local/share/kivun-terminal/wezterm.lua"
+            if [ -f "$WEZTERM_LUA" ]; then
+                if [ -n "$LANG_PROMPT" ]; then
+                    "$WEZTERM_BIN" --config-file "$WEZTERM_LUA" start --cwd "$FOLDER" -- "$CLAUDE_EXEC" --append-system-prompt "$LANG_PROMPT" $CLAUDE_FLAGS &
+                else
+                    "$WEZTERM_BIN" --config-file "$WEZTERM_LUA" start --cwd "$FOLDER" -- "$CLAUDE_EXEC" $CLAUDE_FLAGS &
+                fi
             else
-                "$WEZTERM_BIN" start --cwd "$FOLDER" -- "$CLAUDE_EXEC" $CLAUDE_FLAGS &
+                # Bundled config missing (corrupt install?). Run anyway
+                # so the user gets claude — Hebrew may render LTR until
+                # they reinstall.
+                if [ -n "$LANG_PROMPT" ]; then
+                    "$WEZTERM_BIN" start --cwd "$FOLDER" -- "$CLAUDE_EXEC" --append-system-prompt "$LANG_PROMPT" $CLAUDE_FLAGS &
+                else
+                    "$WEZTERM_BIN" start --cwd "$FOLDER" -- "$CLAUDE_EXEC" $CLAUDE_FLAGS &
+                fi
             fi
             disown 2>/dev/null || true
             exit 0

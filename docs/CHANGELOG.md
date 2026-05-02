@@ -3,6 +3,31 @@
 All notable changes to Kivun Terminal are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.3] - 2026-05-02
+
+User2 reinstalled v1.2.2 on a clean Mac and reported: WezTerm did open (so the brew auto-install worked), but the window was the default dark theme — not the Kivun light-blue — and Hebrew rendered LTR-mirrored. Root cause: **WezTerm 20240127+ ships with `bidi_enabled = false` by default.** v1.2.2 invoked `wezterm start` with no `--config-file`, so the user got WezTerm's defaults: dark theme + BiDi off.
+
+### Fixed: bundled `wezterm.lua` enables BiDi + Kivun theme
+
+- `mac/scripts/wezterm.lua` (NEW): `bidi_enabled = true`, `bidi_direction = 'AutoLeftToRight'`, plus the Kivun light-blue color scheme (`#C8E6FF` background, `#000000` foreground — same colors the .pkg sets via osascript on Apple Terminal).
+- `mac/build.sh` stages it into `build/scripts/`, so it ships inside the `.pkg`.
+- `mac/scripts/postinstall` copies it to `/usr/local/share/kivun-terminal/wezterm.lua` alongside `statusline.mjs` and `languages.sh`.
+- The desktop launcher's `wezterm)` case now invokes `wezterm --config-file "$WEZTERM_LUA" start --cwd "$FOLDER" -- "$CLAUDE_EXEC" ...`. Falls through to plain `wezterm start` if the file is missing (corrupt install) so the user still gets claude.
+- The user's own `~/.config/wezterm/wezterm.lua` is **not touched** — `--config-file` is a per-invocation override that applies only to Kivun-launched WezTerm sessions.
+
+### CI
+
+- `.github/workflows/build-mac.yml`: hard-fail step asserts `wezterm.lua` is staged into `build/scripts/` AND extracted from the `.pkg`, AND that the launcher heredoc references `--config-file "$WEZTERM_LUA"`. Closes the gap that let v1.2.2 ship "WezTerm opens but Hebrew is mirrored."
+
+### Documentation
+
+- `mac/README.md`: lists the bundled `wezterm.lua` as installer step 5, and updates the launcher description to mention `wezterm --config-file ... start --cwd`.
+
+### Known limitations not addressed in v1.2.3
+
+- Inherited from v1.2.2: the `.command` file is opened by Apple Terminal on double-click, so users still see a one-second Apple Terminal flash before WezTerm launches. Cleaning this up needs an `.app` bundle.
+- Inherited from v1.2.2: iTerm2 is still selectable via `MAC_TERMINAL=iterm2`. Its 3.6.x BiDi engine is broken; left in for users with custom builds.
+
 ## [1.2.2] - 2026-05-02
 
 Hebrew on macOS now works out of the box, with **zero manual install steps and zero config edits**. Driven by `kivun-terminal-rtl-debug.v2.md` (a user-driven investigation of why v1.2.1's RTL "fix" still rendered LTR).
