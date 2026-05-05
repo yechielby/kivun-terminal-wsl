@@ -53,11 +53,34 @@ jobs:
           path: installer/Kivun_Terminal_Setup.exe
           if-no-files-found: error
 
+      - name: Extract CHANGELOG section for this tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          # Pull the section between `## [<version>]` and the next `## [...]`
+          # heading from docs/CHANGELOG.md so the GitHub release body is the
+          # human-written explanation of what changed, not just a commit list.
+          # If the section is missing (release with no CHANGELOG entry),
+          # fall back to a short placeholder so the release still publishes.
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
+          awk -v ver="$VERSION" '
+            $0 ~ "^## \\["ver"\\]" { in_section = 1; print; next }
+            /^## \[/ { if (in_section) exit }
+            in_section { print }
+          ' docs/CHANGELOG.md > /tmp/release-notes.md
+          if [ ! -s /tmp/release-notes.md ]; then
+            echo "Release ${TAG}." > /tmp/release-notes.md
+          fi
+          echo "----- /tmp/release-notes.md -----"
+          cat /tmp/release-notes.md
+          echo "----- end -----"
+
       - name: Attach installer to GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           files: installer/Kivun_Terminal_Setup.exe
-          generate_release_notes: true
+          body_path: /tmp/release-notes.md
           draft: false
           prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') }}
