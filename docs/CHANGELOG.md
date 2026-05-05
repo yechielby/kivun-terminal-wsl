@@ -3,6 +3,21 @@
 All notable changes to Kivun Terminal are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.3.2] - 2026-05-05
+
+### Folder picker dialog: two clearly-labeled options + bigger text
+
+User feedback on v1.3.1: *"not clear what opens the tree and what just goes by a path"* and *"test too small"* (text too small).
+
+- **`payload/folder-picker.hta`** — restructured the dialog around two numbered option cards instead of a single "label + input + button" row. Now there are two visually distinct cards:
+  1. *"Type or paste a Windows path here:"* with a full-row monospace text input.
+  2. *"Pick a folder from the Windows folder tree:"* with a "Browse Folder Tree..." button.
+  - Cards are visually separated by an "OR" divider line, removing any ambiguity about which control does what.
+  - Body font bumped to 15px (was 13px). Headline 20px. Path input 16px. Buttons 14–15px. Numbered circles next to each option label give visual anchor points.
+  - Window resized to 920×520 to comfortably fit the larger content. Cards have white backgrounds against the gray body, focus ring on the input, hover/active styles on all buttons.
+  - The primary action stays *"Launch Kivun Terminal"*; *"Edit Default Flags"* and *"Cancel"* unchanged.
+  - **Window now uses the Kivun icon** (`HTA:APPLICATION ICON="kivun_icon.ico"`) instead of mshta's default red HTML scroll. Visible in the dialog title bar and the Windows taskbar.
+
 ## [1.3.1] - 2026-05-05
 
 ### Folder picker dialog: visual polish + clearer flow
