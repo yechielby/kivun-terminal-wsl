@@ -1,294 +1,142 @@
 # Kivun Terminal Configuration
-# Primary RTL language and response language settings
+#
+# Edit this file to change Kivun's behavior. The top of the file has
+# the settings most users tweak; the bottom has BiDi-wrapper internals
+# (defaults are good) and the full 23-language reference.
+
 
 # =================================================================
-# PRIMARY RTL LANGUAGE
+# QUICK SETTINGS (the things most users want to change)
 # =================================================================
-# Your primary RTL language (selected during installation)
-# This determines which RTL language you primarily work with
-PRIMARY_LANGUAGE=hebrew
 
-# =================================================================
-# CLAUDE RESPONSE LANGUAGE
-# =================================================================
-# Controls what language Claude Code responds in.
+# Default flags appended to every `claude` invocation. Mix and match
+# as you would type them on the command line — no quoting needed.
 #
-# Supported Languages (23):
-#   english       - English (default - best for technical content)
-#   hebrew        - Hebrew (עברית)
-#   arabic        - Arabic (العربية)
-#   persian       - Persian / Farsi (فارسی)
-#   urdu          - Urdu (اردو)
-#   kurdish       - Kurdish (کوردی)
-#   pashto        - Pashto (پښتو)
-#   sindhi        - Sindhi (سنڌي)
-#   yiddish       - Yiddish (ייִדיש)
-#   syriac        - Syriac (ܣܘܪܝܝܐ)
-#   dhivehi       - Dhivehi / Maldivian (ދިވެހި)
-#   nko           - N'Ko (ߒߞߏ)
-#   adlam         - Adlam (𞤢𞤣𞤤𞤢𞤥)
-#   mandaic       - Mandaic (ࡌࡀࡍࡃࡀࡉࡉࡀ)
-#   samaritan     - Samaritan Hebrew (ࠀࠁࠂ)
-#   dari          - Dari (دری)
-#   uyghur        - Uyghur (ئۇيغۇرچە)
-#   balochi       - Balochi (بلۏچی)
-#   kashmiri      - Kashmiri (کٲشُر)
-#   shahmukhi     - Punjabi Shahmukhi (پنجابی)
-#   azeri-south   - Southern Azeri (تۆرکجه)
-#   jawi          - Malay Jawi (جاوي)
-#   turoyo        - Turoyo / Neo-Aramaic (ܛܘܪܝܐ)
+# Useful Claude Code flags:
+#   --continue              Resume your last conversation
+#   --resume my-session     Resume a named session
+#   --model opus            Use Opus (strongest reasoning)
+#   --model sonnet          Use Sonnet (faster, cheaper)
+#   --model haiku           Use Haiku (fastest, lightest)
+#   --print                 One-off answer, no interactive chat
+#   --add-dir C:\full\path  Give Claude access to an extra folder
+#   --enable-auto-mode      Skip permission prompts (auto-approve)
 #
-# Default: english (recommended for development / technical work)
-# You can change this anytime and restart the Kivun Terminal launcher.
-RESPONSE_LANGUAGE=english
+# Combine: CLAUDE_FLAGS=--continue --model opus --enable-auto-mode
+# Default: empty (no extra flags — standard interactive Claude Code)
+CLAUDE_FLAGS=
 
-# =================================================================
-# UBUNTU CREDENTIALS
-# =================================================================
-# The WSL Ubuntu account is created interactively during installation —
-# the installer prompts for a username and password in a terminal the
-# first time Ubuntu boots. There are no credential keys in this file
-# (earlier builds shipped USERNAME=username / PASSWORD=password defaults;
-# those were removed because secret-scanners flagged them and they were
-# also terrible defaults).
-
-# =================================================================
-# VCXSRV X SERVER (KEYBOARD SWITCHING)
-# =================================================================
-# Set to true to use VcXsrv instead of WSLg for Konsole display.
-# This enables Alt+Shift keyboard language switching inside Konsole.
-#
-# Requires VcXsrv to be installed:
-#   - Select "VcXsrv X Server" during installation, OR
-#   - Install manually from https://sourceforge.net/projects/vcxsrv/
-#
-# Default: true (uses VcXsrv for reliable Alt+Shift keyboard switching)
-# Set to false to force WSLg mode (no Alt+Shift, but no VcXsrv dependency)
-USE_VCXSRV=true
-
-# =================================================================
-# FOLDER PICKER ON LAUNCH
-# =================================================================
-# When true, the desktop shortcut pops a native Windows folder-browse
-# dialog before Konsole opens — pick the working directory each time.
-# When false, the shortcut always opens in %USERPROFILE%.
-#
-# Right-click "Open with Kivun Terminal" on a folder always uses that
-# folder directly — this setting is ignored in that path.
-#
+# When true, the desktop shortcut pops a folder picker (browse the
+# tree or paste a path) before Konsole opens. When false, the
+# shortcut always opens in your Windows home directory.
+# Right-click "Open with Kivun Terminal" ignores this setting.
 # Default: true
 FOLDER_PICKER=true
 
-# =================================================================
-# CLAUDE FLAGS (default tags for every launch)
-# =================================================================
-# Flags appended to every `claude` invocation by Kivun Terminal.
-# Edit this line to set your defaults — no quoting needed, just
-# space-separated flags as you would type them on the command line.
-#
-# Common Claude Code flags (verify against `claude --help`):
-#
-#   --continue                 Resume your most recent conversation
-#   --resume my-session        Resume a session by name
-#   --model opus               Use Opus (strongest reasoning)
-#   --model sonnet             Use Sonnet (faster, cheaper)
-#   --model haiku              Use Haiku (fastest, lightest)
-#   --print "your question"    One-off answer, no interactive chat
-#   --add-dir C:\extra\folder  Give Claude access to an extra folder
-#   --enable-auto-mode         Skip permission prompts (auto-approve)
-#
-# You can combine: CLAUDE_FLAGS=--continue --model opus
-#
-# Default: empty (no extra flags). Leave blank for the standard
-# interactive Claude Code launch.
-CLAUDE_FLAGS=
+# Language Claude responds in. Default: english.
+# Full list of 23 supported languages at the bottom of this file.
+RESPONSE_LANGUAGE=english
+
+# Your primary RTL keyboard layout — used for the Alt+Shift toggle
+# inside Konsole. Default: hebrew.
+PRIMARY_LANGUAGE=hebrew
+
 
 # =================================================================
-# TEXT DIRECTION (RTL INPUT)
+# DISPLAY & INSTALL (occasional changes)
 # =================================================================
-# Controls input text alignment in the terminal
-#   rtl  - Right-aligned input (Hebrew/Arabic text hugs right edge)
-#   ltr  - Left-aligned input (default terminal behavior)
-#
+
+# Use VcXsrv (true) instead of WSLg (false) for Konsole display.
+# VcXsrv enables Alt+Shift keyboard switching; WSLg doesn't.
+# Requires VcXsrv installed: https://sourceforge.net/projects/vcxsrv/
+# Default: true
+USE_VCXSRV=true
+
+# Input text alignment in the terminal:
+#   rtl  - Right-aligned (Hebrew/Arabic hugs the right edge)
+#   ltr  - Left-aligned  (default terminal behavior)
 # Default: rtl
 TEXT_DIRECTION=rtl
 
+# How the launcher handles missing Claude Code in WSL:
+#   yes  - Auto-install (default)
+#   ask  - Prompt [Y/N] each time
+#   no   - Skip and show manual install instructions
+AUTO_INSTALL_CLAUDE=yes
+
+
 # =================================================================
-# BIDI WRAPPER (Hebrew rendering for Claude Code output)
+# BIDI WRAPPER — Hebrew rendering tunables (advanced; leave alone)
 # =================================================================
-# When set to "on" (the default), Claude Code output is piped through
-# the kivun-claude-bidi wrapper, which injects Unicode RLE/PDF bracket
-# pairs (U+202B / U+202C) around Hebrew runs so they render
-# right-to-left regardless of the Konsole profile's BiDi settings.
-#
-# The installer deploys the wrapper automatically; first launch runs a
-# one-time `npm install` (~5-15 s) inside WSL to build its native
-# dependencies. Subsequent launches are instant.
-#
-# If you see rendering issues or want to fall back to unwrapped claude,
-# change the value below to "off" and relaunch. The launcher logs the
-# wrapper state to BASH_LAUNCH_LOG.txt on every launch.
-#
-# Default: on
+# The Node.js wrapper pipes Claude Code's output through Unicode
+# RLE/PDF/RLM markers so Hebrew renders right-to-left in Konsole.
+# Defaults work for most users. Full design notes in
+# docs/specs/BIDI_ALGORITHM.md if you need to tune.
+
+# Master switch for the wrapper. Default: on
 KIVUN_BIDI_WRAPPER=on
 
-# =================================================================
-# STRIP BULLET on Hebrew lines (Konsole 23.x bullet-line workaround)
-# =================================================================
-# When set to "on", the BiDi wrapper removes the leading bullet (●)
-# from any line whose first strong char is Hebrew. The bullet alone
-# is what was making Konsole 23.x leave Hebrew bullet-lines stuck on
-# the LEFT side of the screen: the BiDi engine treats ● as a
-# direction-anchoring neutral and won't flip the line RTL. Without
-# the bullet, the line's first visible char is Hebrew, BiDi flips
-# the line RTL automatically, and the Hebrew renders right-aligned.
-#
-# Trade-off: you lose the visible bullet marker on Hebrew bullet
-# lines (the indentation stays). Most users find this preferable to
-# the broken left-alignment. English lines are not affected.
-#
-# Default: on (user-confirmed fix in v1.1.8 for the Konsole 23.x
-# bullet-LTR bug). Set to "off" if you're on Konsole 24.04+ and want
-# the visible bullet markers back; that version renders correctly
-# without the workaround.
+# Strip leading bullet (●) from Hebrew lines (Konsole 23.x bullet-
+# direction workaround). Default: on
 KIVUN_BIDI_STRIP_BULLET=on
 
-# =================================================================
-# STRIP INCOMING bidi controls from Claude's stream (v1.1.9)
-# =================================================================
-# Strips explicit Unicode directional controls — LRE/RLE/PDF/LRO/RLO
-# (U+202A-U+202E) and LRI/RLI/FSI/PDI (U+2066-U+2069) — from Claude's
-# output before the wrapper processes it, so the wrapper is the only
-# thing emitting directional markers. LRM (U+200E) and RLM (U+200F)
-# pass through untouched.
-#
-# Modes:
-#   off  - passthrough; Claude's bidi controls reach the terminal as-is
-#   auto - strip and count; log a single line on first detection to
-#          ~/.local/state/kivun-terminal/bidi-strip.log (default)
-#   on   - strip and count; log every chunk where stripping happened
-#          (verbose; useful if you're investigating a specific render bug)
-#
-# Why this is "auto" by default: most observed Claude output contains
-# zero directional controls, so the strip is a no-op in practice. The
-# value of leaving it on is the side log — a single line per session
-# the first time pollution is seen, which lets us tell "Claude polluted
-# the stream" apart from "Konsole rendered it wrong" without a full
-# packet trace.
+# Strip explicit Unicode directional controls from Claude's stream
+# (LRE/RLE/PDF/LRO/RLO/LRI/RLI/FSI/PDI; preserves LRM/RLM).
+# Modes: off | auto (single side-log entry on first detect) | on (verbose)
+# Default: auto
 KIVUN_BIDI_STRIP_INCOMING=auto
 
-# =================================================================
-# DUMP RAW upstream bytes for debugging (v1.1.10)
-# =================================================================
-# Off by default. Debug-only — turn this on when you have a render
-# bug you suspect involves stream pollution but the strip log shows
-# zero detections (or you want to see the full byte context around
-# what was stripped).
-#
-# When set to "on", the wrapper appends every chunk Claude sends
-# to a side file BEFORE the strip-incoming pass touches it:
-#
-#     ~/.local/state/kivun-terminal/bidi-raw-dump.bin
-#
-# The file is appended-to across writes and gets a "session start"
-# / "session end" marker line per Kivun launch. To prevent
-# unbounded growth, when an existing dump file is larger than
-# 5 MiB at session start it gets renamed to .bin.old and a fresh
-# .bin file starts. So at any time you have at most the current
-# session's dump plus the previous session's rollover.
-#
-# Performance: writing every chunk to disk adds ~0 ms per chunk
-# in normal use because the file is small and Linux page cache
-# absorbs writes. Don't leave this on indefinitely though — it
-# fills disk over time even with the rotation cap.
-#
-# To inspect what was on the wire (after running a Kivun session
-# with this on):
-#
-#     # full dump (warning: contains ANSI escapes — use less -R):
-#     less -R ~/.local/state/kivun-terminal/bidi-raw-dump.bin
-#
-#     # just the bidi control chars and surrounding context:
-#     grep -aPo '.{0,20}[\x{202A}-\x{202E}\x{2066}-\x{2069}].{0,20}' \
-#         ~/.local/state/kivun-terminal/bidi-raw-dump.bin
-#
-#     # hex view of the bidi bytes (RLE = e2 80 ab, etc.):
-#     xxd ~/.local/state/kivun-terminal/bidi-raw-dump.bin | head -40
-#
-# Default: off
-KIVUN_BIDI_DUMP_RAW=off
-
-# =================================================================
-# FLATTEN COLORS on RTL lines (v1.1.10) - the actual mixed-content fix
-# =================================================================
-# Empirically confirmed via Konsole 23.08.5 A/B test (April 2026):
-# Konsole's BiDi engine only operates on continuous-attribute regions.
-# Any color change inside a Hebrew sentence splits the BiDi run, and
-# Qt's text layout positions the resulting fragments incorrectly --
-# typically pushing English/code runs to the visual LEFT instead of
-# their correct UAX #9 logical position inside the sentence.
-#
-# This is also documented at the upstream Terminal Working Group:
-#   https://terminal-wg.pages.freedesktop.org/bidi/prior-work/terminals.html
-# > "Applies BiDi on continuous runs of identical attributes. Any
-# > change in e.g. color [...] stops and starts it anew, often
-# > resulting in a confusing and incorrect visual behavior."
-#
-# Stripping SGR escapes from RTL lines makes the whole line one
-# attribute run -- Konsole's BiDi gets a clean line to work with and
-# LTR runs (English, code, numbers) land in their correct positions.
-#
-# Modes:
-#   off - passthrough; SGR codes reach Konsole as-is on every line
-#         (positioning will be broken on mixed Hebrew lines)
-#   on  - strip SGR (CSI...m) sequences from any line whose first
-#         strong char is Hebrew; LTR lines unaffected (default)
-#
-# Trade-off: visible loss of syntax color on Hebrew lines. If your
-# workflow is mostly English code with occasional Hebrew, you may
-# prefer color over positioning -- set this to "off". For users
-# whose Claude conversation is mostly Hebrew, "on" is the right
-# default (positioning correctness > color).
-#
-# Important: this strips ONLY SGR sequences (CSI sequences ending
-# in 'm'). Cursor positioning, screen clear, OSC window-title, etc.
-# all pass through unchanged. LTR lines are NEVER touched.
-#
-# Default: on
+# Strip ANSI color codes from RTL lines so Konsole's BiDi gets one
+# continuous attribute run per line. Trade-off: no syntax color on
+# Hebrew lines. Default: on
 KIVUN_BIDI_FLATTEN_COLORS_RTL=on
 
-# =================================================================
-# SKIP PER-RUN RLE/PDF BRACKETING on RTL lines (v1.1.11)
-# =================================================================
-# THE actual fix for "English/code shifts to the wrong column inside
-# Hebrew sentences." Confirmed via Konsole 23.08.5 A/B test (April
-# 2026): even with v1.1.10 FLATTEN_COLORS_RTL stripping all SGR,
-# real Claude output still mispositioned 'React 19', 'Claude Code',
-# numbers, etc. Investigation showed the wrapper's own RLE/PDF
-# bracketing (one pair PER Hebrew run on a line) was creating
-# multiple attribute-region boundaries that Konsole's per-region
-# BiDi mispositions -- exactly what FLATTEN was supposed to fix.
-#
-# The same lines rendered with NO per-run brackets (just RLM at
-# line-start + Konsole's native UAX #9) position correctly. So
-# the wrapper now skips per-run bracketing on RTL lines. Hebrew
-# runs INSIDE LTR paragraphs (Hebrew embedded in English) still
-# get bracketed since the direction marker IS needed there.
-#
-# Modes:
-#   off - no per-run brackets on RTL lines (default v1.1.11+)
-#         The line is one attribute region; Konsole positions LTR
-#         runs at their UAX #9 logical positions.
-#   on  - bracket every Hebrew run regardless of paragraph direction
-#         (legacy v1.1.0 - v1.1.10 behavior; reverts to the
-#         multiple-attribute-region pattern that misposes LTR runs)
-#
-# Default: off
+# Bracket every Hebrew run with RLE/PDF on already-RTL lines. Off is
+# correct for Konsole 23.x; on reverts to legacy v1.1.0–v1.1.10
+# behavior. Default: off
 KIVUN_BIDI_BRACKET_RTL_RUNS=off
 
+# Debug-only: dump raw upstream bytes to
+# ~/.local/state/kivun-terminal/bidi-raw-dump.bin (rotated at 5 MiB).
+# Useful when investigating wrapper bugs. Default: off
+KIVUN_BIDI_DUMP_RAW=off
+
+
 # =================================================================
-# For more information:
-# - SECURITY.txt - Password security explained
-# - CREDENTIALS.txt - Login information
-# - README_INSTALLATION.md - Full setup guide
+# REFERENCE: 23 supported languages for RESPONSE_LANGUAGE
 # =================================================================
+#
+#   english       English (default — best for technical content)
+#   hebrew        Hebrew (עברית)
+#   arabic        Arabic (العربية)
+#   persian       Persian / Farsi (فارסی)
+#   urdu          Urdu (اردו)
+#   kurdish       Kurdish (کوردی)
+#   pashto        Pashto (پښتو)
+#   sindhi        Sindhi (سنڌي)
+#   yiddish       Yiddish (ייִדיש)
+#   syriac        Syriac (ܣܘܪܝܝܐ)
+#   dhivehi       Dhivehi / Maldivian (ދިވެހި)
+#   nko           N'Ko (ߒߞߏ)
+#   adlam         Adlam (𞤢𞤣𞤤𞤢𞤥)
+#   mandaic       Mandaic (ࡌࡀࡍࡃࡀࡉࡉࡀ)
+#   samaritan     Samaritan Hebrew (ࠀࠁࠂ)
+#   dari          Dari (دری)
+#   uyghur        Uyghur (ئۇيغۇرچە)
+#   balochi       Balochi (بلۏچی)
+#   kashmiri      Kashmiri (کٲشُر)
+#   shahmukhi     Punjabi Shahmukhi (پنجابی)
+#   azeri-south   Southern Azeri (تۆرکجه)
+#   jawi          Malay Jawi (جاوي)
+#   turoyo        Turoyo / Neo-Aramaic (ܛܘܪܝܐ)
+#
+# Pick one and set RESPONSE_LANGUAGE=<name> at the top of this file.
+
+
+# =================================================================
+# Notes
+# =================================================================
+# - Ubuntu credentials: created interactively by the WSL setup, not
+#   stored in this file.
+# - More info: docs/SECURITY.txt, docs/CREDENTIALS.txt,
+#   docs/README_INSTALLATION.md, docs/TROUBLESHOOTING.md.

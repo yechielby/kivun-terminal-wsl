@@ -3,6 +3,26 @@
 All notable changes to Kivun Terminal are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.8] - 2026-05-05
+
+### `config.txt` reorganized — main settings first, advanced last
+
+User feedback: *"this is not user friendly. should be the main things to set first. all other stuff and langueses posibilites later."* and *"it is missing the tags options completly. we had in the other project a full option."*
+
+The previous config.txt mixed the things users actually edit (`CLAUDE_FLAGS`, `FOLDER_PICKER`, `RESPONSE_LANGUAGE`) with BiDi-wrapper internals, and bloated the top of the file with the full 23-language list — making the first thing a new user saw a wall of language entries rather than the settings they probably came to change.
+
+**New structure (`payload/config.txt`):**
+
+1. **QUICK SETTINGS** — `CLAUDE_FLAGS`, `FOLDER_PICKER`, `RESPONSE_LANGUAGE` (one-liner with pointer to the full list at the bottom), `PRIMARY_LANGUAGE`. Each has a 3–4 line comment, no walls of text.
+2. **DISPLAY & INSTALL** — `USE_VCXSRV`, `TEXT_DIRECTION`, `AUTO_INSTALL_CLAUDE` (the last is now a documented config key — previously only readable from the .bat's defaults).
+3. **BIDI WRAPPER** — all six `KIVUN_BIDI_*` tunables, with one-paragraph descriptions instead of the previous multi-screen explanations. Pointer to `docs/specs/BIDI_ALGORITHM.md` for users who need the full design notes.
+4. **REFERENCE: 23 supported languages** — full list with native-script labels, moved to the bottom. Out of the way for first-time setup, still easy to find when you want to switch.
+5. **Notes** — pointers to `SECURITY.txt`, `CREDENTIALS.txt`, etc.
+
+`CLAUDE_FLAGS` documentation matches the sibling `kivun-terminal` project's full flag reference (8 flags: `--continue`, `--resume`, `--model opus/sonnet/haiku`, `--print`, `--add-dir`, `--enable-auto-mode`).
+
+No code changes — the launcher's config-parser still reads the same keys; only the file's layout and prose changed.
+
 ## [1.2.7] - 2026-05-05
 
 ### Added: persistent default Claude flags via `config.txt`
