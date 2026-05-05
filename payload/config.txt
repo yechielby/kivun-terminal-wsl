@@ -80,6 +80,30 @@ USE_VCXSRV=true
 FOLDER_PICKER=true
 
 # =================================================================
+# CLAUDE FLAGS (default tags for every launch)
+# =================================================================
+# Flags appended to every `claude` invocation by Kivun Terminal.
+# Edit this line to set your defaults — no quoting needed, just
+# space-separated flags as you would type them on the command line.
+#
+# Common Claude Code flags (verify against `claude --help`):
+#
+#   --continue                 Resume your most recent conversation
+#   --resume my-session        Resume a session by name
+#   --model opus               Use Opus (strongest reasoning)
+#   --model sonnet             Use Sonnet (faster, cheaper)
+#   --model haiku              Use Haiku (fastest, lightest)
+#   --print "your question"    One-off answer, no interactive chat
+#   --add-dir C:\extra\folder  Give Claude access to an extra folder
+#   --enable-auto-mode         Skip permission prompts (auto-approve)
+#
+# You can combine: CLAUDE_FLAGS=--continue --model opus
+#
+# Default: empty (no extra flags). Leave blank for the standard
+# interactive Claude Code launch.
+CLAUDE_FLAGS=
+
+# =================================================================
 # TEXT DIRECTION (RTL INPUT)
 # =================================================================
 # Controls input text alignment in the terminal

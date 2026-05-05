@@ -3,6 +3,24 @@
 All notable changes to Kivun Terminal are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.7] - 2026-05-05
+
+### Added: persistent default Claude flags via `config.txt`
+
+- New `CLAUDE_FLAGS=` setting in `payload/config.txt` — appended unquoted to every `claude` invocation. Empty by default. Inline documentation lists the common Claude Code flags (`--continue`, `--model opus`, `--enable-auto-mode`, etc.) so users can see the menu without leaving the file. The folder-picker dialog now points at it: *"Use the tree or paste a path. (Default Claude flags: see CLAUDE_FLAGS in config.txt)"*.
+- `payload/kivun-terminal.bat` — reads `CLAUDE_FLAGS` from `config.txt` (with the same SECURITY-quoted parser as the other settings, so a malicious config can't inject commands), passes the value as positional arg 8 to `kivun-launch.sh` and arg 3 to `kivun-direct.sh`.
+- `payload/kivun-launch.sh` — accepts `${8:-}` as `CLAUDE_FLAGS`, splices it into the heredoc'd launch script after `--append-system-prompt`. Unquoted on purpose so bash word-splits `--a --b` into two argv entries.
+- `payload/kivun-direct.sh` — accepts `${3:-}` as `EXTRA_FLAGS`, appends to the `claude` invocation in all three resolver branches (`~/.local/bin`, `/usr/local/bin`, PATH).
+
+### Picker dialog: prompt text iteration
+
+- Final prompt: *"Use the tree or paste a path. (Default Claude flags: see CLAUDE_FLAGS in config.txt)"*. Earlier strings (`"Select a folder for Kivun Terminal — browse the tree, or type / paste a path below."`, `"Path: type or paste a Windows path..."`, `"Pick a folder: browse the tree..."`, `"Use the tree or paste a path"`) iterated through this session in response to user feedback that they were too verbose, too academic, or contained an em-dash that some Windows configurations rendered as a stray glyph. The final form is short, action-led, em-dash-free, and references the config file for flag editing.
+
+### Deferred (reaffirmed)
+
+- **No per-session temp txt file for flags.** User constraint from this session: *"for flags, txt file is not acceptable"* — referring to the sibling `kivun-terminal` project's pattern of writing one-shot flags into `%LOCALAPPDATA%\Kivun\kivun-claude-flags.txt`. v1.2.7 sets static defaults via `config.txt` instead; per-launch flag overrides (an interactive prompt after the picker) are not implemented.
+- **No startup-command auto-typing.** Sibling pattern uses Windows-side WScript SendKeys to type a command into the Claude TUI after launch — that approach cannot reach a process running inside WSL Konsole, so a port would need a Linux-side keystroke injector and a synchronization handshake. Out of scope.
+
 ## [1.2.6] - 2026-05-05
 
 Two desktop-shortcut bugs reported on a fresh v1.2.5 install: cancelling the folder picker dropped the user into a minimized cmd window with an invisible `set /p` prompt; and on slower machines two Claude Code windows opened (one in Konsole, one in the launcher's cmd console) because the launcher's `pgrep`-based Konsole-detection raced.

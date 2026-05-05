@@ -66,6 +66,7 @@ set PRIMARY_LANGUAGE=hebrew
 set USE_VCXSRV=false
 set TEXT_DIRECTION=rtl
 set FOLDER_PICKER=false
+set "CLAUDE_FLAGS="
 REM v1.1.3: AUTO_INSTALL_CLAUDE controls the Claude-missing flow.
 REM   yes (default) - install automatically, no prompt
 REM   ask           - prompt [Y/N] like v1.1.1/v1.1.2
@@ -84,8 +85,9 @@ if exist "%~dp0config.txt" (
         if "%%a"=="TEXT_DIRECTION"        set "TEXT_DIRECTION=%%b"
         if "%%a"=="FOLDER_PICKER"         set "FOLDER_PICKER=%%b"
         if "%%a"=="AUTO_INSTALL_CLAUDE"   set "AUTO_INSTALL_CLAUDE=%%b"
+        if "%%a"=="CLAUDE_FLAGS"          set "CLAUDE_FLAGS=%%b"
     )
-    call :LOG "SUCCESS - Config loaded: language=%RESPONSE_LANGUAGE%, keyboard=%PRIMARY_LANGUAGE%, vcxsrv=%USE_VCXSRV%, textdir=%TEXT_DIRECTION%, folderpicker=%FOLDER_PICKER%"
+    call :LOG "SUCCESS - Config loaded: language=%RESPONSE_LANGUAGE%, keyboard=%PRIMARY_LANGUAGE%, vcxsrv=%USE_VCXSRV%, textdir=%TEXT_DIRECTION%, folderpicker=%FOLDER_PICKER%, flags=%CLAUDE_FLAGS%"
 ) else (
     call :LOG "WARNING - config.txt not found, using defaults"
 )
@@ -441,9 +443,9 @@ REM clutter the desktop; all its output still goes to BASH_LAUNCH_LOG.txt.
 echo.
 echo Launching Konsole...
 call :LOG "INFO - Launching Konsole via kivun-launch.sh"
-call :LOG "INFO - Command: wsl -d Ubuntu %WSL_USER_FLAG% bash %INST_WSL%kivun-launch.sh %WSL_PATH% [prompt] %PRIMARY_LANGUAGE% %USE_VCXSRV% %BASH_LOG_WSL% %TEXT_DIRECTION% %PRIMARY_MON%"
+call :LOG "INFO - Command: wsl -d Ubuntu %WSL_USER_FLAG% bash %INST_WSL%kivun-launch.sh %WSL_PATH% [prompt] %PRIMARY_LANGUAGE% %USE_VCXSRV% %BASH_LOG_WSL% %TEXT_DIRECTION% %PRIMARY_MON% [flags]"
 title Kivun Terminal v%PRODUCT_VERSION% - Loading
-start "Kivun Bash" /MIN wsl -d Ubuntu %WSL_USER_FLAG% bash "%INST_WSL%kivun-launch.sh" "%WSL_PATH%" "%CLAUDE_PROMPT%" "%PRIMARY_LANGUAGE%" "%USE_VCXSRV%" "%BASH_LOG_WSL%" "%TEXT_DIRECTION%" "%PRIMARY_MON%"
+start "Kivun Bash" /MIN wsl -d Ubuntu %WSL_USER_FLAG% bash "%INST_WSL%kivun-launch.sh" "%WSL_PATH%" "%CLAUDE_PROMPT%" "%PRIMARY_LANGUAGE%" "%USE_VCXSRV%" "%BASH_LOG_WSL%" "%TEXT_DIRECTION%" "%PRIMARY_MON%" "%CLAUDE_FLAGS%"
 if %ERRORLEVEL% EQU 0 (
     call :LOG "SUCCESS - Launch command executed"
 ) else (
@@ -499,7 +501,7 @@ REM the Konsole-launch path but missed this one — when Konsole failed and
 REM we fell back to direct execution, we'd still spawn Claude as the wsl
 REM default user (which on root-default-user distros is root, and Claude
 REM refuses). Now both paths use the same resolved non-root user.
-wsl -d Ubuntu %WSL_USER_FLAG% bash "%INST_WSL%kivun-direct.sh" "%WSL_PATH%" "%CLAUDE_PROMPT%"
+wsl -d Ubuntu %WSL_USER_FLAG% bash "%INST_WSL%kivun-direct.sh" "%WSL_PATH%" "%CLAUDE_PROMPT%" "%CLAUDE_FLAGS%"
 call :LOG "COMPLETE - Claude session ended"
 echo.
 echo ========================================

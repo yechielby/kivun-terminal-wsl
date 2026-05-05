@@ -15,6 +15,11 @@ USE_VCXSRV="${4:-false}"
 LOG_FILE="${5:-/tmp/kivun-bash-launch.log}"
 TEXT_DIR="${6:-rtl}"
 PRIMARY_MON="${7:-}"
+# v1.2.7: extra Claude flags from config.txt CLAUDE_FLAGS=. Empty by
+# default; users edit config.txt to set --continue / --model opus / etc.
+# Passed unquoted to claude so the shell word-splits "--a --b" into two
+# args. Not embedded in CLAUDE_PROMPT — that's the system prompt text.
+CLAUDE_FLAGS="${8:-}"
 
 # v1.1.5: read product version from the VERSION file the .bat ships next
 # to this script. Single source of truth -- previously the bash log
@@ -624,9 +629,9 @@ echo ""
 KT_SETTINGS="\$HOME/.local/share/kivun-terminal/settings.json"
 
 if [ -n "$CLAUDE_PROMPT" ]; then
-    $CLAUDE_EXEC --settings "\$KT_SETTINGS" --append-system-prompt "$CLAUDE_PROMPT"
+    $CLAUDE_EXEC --settings "\$KT_SETTINGS" --append-system-prompt "$CLAUDE_PROMPT" $CLAUDE_FLAGS
 else
-    $CLAUDE_EXEC --settings "\$KT_SETTINGS"
+    $CLAUDE_EXEC --settings "\$KT_SETTINGS" $CLAUDE_FLAGS
 fi
 EXIT_CODE=\$?
 
