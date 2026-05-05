@@ -1,0 +1,107 @@
+name: Verify Downloads Badge
+
+# Catches the "shields.io renders 'invalid' on a release with 0 downloads"
+# class of bug. Probes the live badge SVG, and if it's stuck in an error
+# state, runs `gh release upload --clobber` on the smallest asset of the
+# latest release to refresh GitHub's asset metadata — which tickles the
+# `download_count` field that shields.io reads. Self-heals silently when
+# possible; opens a single tracking issue when --clobber doesn't help.
+
+on:
+  release:
+    types: [published]
+  schedule:
+    # Daily at 06:00 UTC. Catches shields.io regressions that show up
+    # days/weeks after release (rate-limit hiccups, edge-cache poisoning).
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for assets to settle (release event only)
+        if: github.event_name == 'release'
+        run: sleep 60
+
+      - name: Probe + self-heal + report
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -uo pipefail
+          BADGE_URL="https://img.shields.io/github/downloads/${REPO}/total?label=downloads&color=blue"
+
+          probe() {
+            # Cache-bust via timestamp param to bypass shields' edge cache.
+            curl -fsSL --max-time 30 "${BADGE_URL}&_=$(date +%s%N)" 2>/dev/null || echo "FETCH_FAILED"
+          }
+
+          is_broken() {
+            local svg="$1"
+            [ "$svg" = "FETCH_FAILED" ] && return 1   # transient shields outage — don't treat as broken
+            printf '%s' "$svg" | grep -qiE '>invalid<|>no[ _-]?data<|>n/a<|>error<'
+          }
+
+          SVG=$(probe)
+          echo "::group::Initial badge SVG"
+          printf '%s\n' "$SVG"
+          echo "::endgroup::"
+
+          if [ "$SVG" = "FETCH_FAILED" ]; then
+            echo "::warning::Could not fetch shields.io (transient outage?). Skipping check."
+            exit 0
+          fi
+
+          if ! is_broken "$SVG"; then
+            echo "Badge is healthy."
+            exit 0
+          fi
+
+          echo "::warning::Badge is rendering an error state. Attempting --clobber heal."
+
+          LATEST=$(gh release list --repo "$REPO" --limit 1 --json tagName --jq '.[0].tagName // empty')
+          HEAL_FAILED=0
+          if [ -z "$LATEST" ]; then
+            echo "::error::No releases found."
+            HEAL_FAILED=1
+          else
+            ASSET=$(gh release view "$LATEST" --repo "$REPO" --json assets --jq '.assets | sort_by(.size) | .[0].name // empty')
+            if [ -z "$ASSET" ]; then
+              echo "::error::Release $LATEST has no assets."
+              HEAL_FAILED=1
+            else
+              echo "Healing: re-uploading $ASSET on $LATEST with --clobber"
+              mkdir -p /tmp/heal && cd /tmp/heal
+              if gh release download "$LATEST" --repo "$REPO" --pattern "$ASSET" \
+                 && gh release upload "$LATEST" "$ASSET" --repo "$REPO" --clobber; then
+                echo "Heal succeeded. Asset metadata refreshed; shields.io cache will follow within ~5 min."
+              else
+                echo "::error::--clobber heal failed."
+                HEAL_FAILED=1
+              fi
+            fi
+          fi
+
+          if [ "$HEAL_FAILED" = "1" ]; then
+            # De-dupe: only open a new issue if there isn't already an open
+            # one tracking this exact problem. Otherwise comment on the
+            # existing issue so the maintainer sees the recurrence.
+            EXISTING=$(gh issue list --repo "$REPO" --state open \
+              --search 'Downloads badge stuck in:title' \
+              --json number --jq '.[0].number // empty')
+            if [ -n "$EXISTING" ]; then
+              gh issue comment "$EXISTING" --repo "$REPO" \
+                --body "Auto-heal failed again on run: $RUN_URL"
+            else
+              gh issue create --repo "$REPO" \
+                --title "Downloads badge stuck on 'invalid' — auto-heal failed" \
+                --body $'The verify-downloads-badge workflow detected a broken Shields.io downloads badge and the automatic --clobber re-upload step failed.\n\nRun: '"$RUN_URL"$'\n\nManual recovery: see the "Asset Persistence (badge re-sync)" rule in CLAUDE.md.'
+            fi
+            exit 1
+          fi
