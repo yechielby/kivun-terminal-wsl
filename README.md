@@ -14,7 +14,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License"></a>
-  <img src="https://img.shields.io/badge/version-1.2.4-brightgreen" alt="v1.2.4">
+  <img src="https://img.shields.io/badge/version-1.2.6-brightgreen" alt="v1.2.6">
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux-lightgrey" alt="Platform">
   <img src="https://img.shields.io/badge/RTL%20languages-11-orange" alt="11 RTL Languages">
   <a href="https://github.com/noambrand/kivun-terminal-wsl/releases/latest"><img src="https://img.shields.io/github/downloads/noambrand/kivun-terminal-wsl/total?color=purple&label=downloads" alt="Total Downloads"></a>
@@ -61,6 +61,15 @@
 | **Startup time** | ~2 s | ~6 s (Konsole launch) |
 | **Install footprint (Windows)** | ~150 MB | ~2 GB (WSL + Ubuntu) |
 
+## What's included out of the box
+
+- **Folder picker dialog** on the desktop shortcut — browse the folder tree **or** type/paste a Windows path directly in the same dialog (no separate prompt to wade through). Cancel = open in your home directory.
+- **Right-click "Open with Kivun Terminal"** on any folder in File Explorer — launches straight into that folder, skipping the picker.
+- **Live two-line statusline** at the bottom of every Claude Code session — model, context %, total tokens, session duration, and 5-hour / 7-day usage with countdown to reset.
+- **Light-blue Kivun theme** for Konsole (`#C8E6FF` background) — easy on the eyes, on by default. Disable via `TERMINAL_COLOR=default`.
+- **BiDi wrapper** that fixes Hebrew/Arabic/Persian rendering bugs in Claude Code's TUI (see [BiDi Wrapper](#bidi-wrapper) below for the seven specific fixes).
+- **Auto-installs everything** — WSL2 + Ubuntu + Konsole + Node.js + Claude Code itself, on a clean Windows machine. The installer asks once and handles the rest.
+
 ## Quick Start
 
 ### Windows
@@ -68,7 +77,7 @@
 1. **One-time WSL setup** (skip if `wsl --status` already prints WSL info): open **Terminal (Admin)**, run `wsl --install`, reboot.
 2. **[Download `Kivun_Terminal_Setup.exe`](https://github.com/noambrand/kivun-terminal-wsl/releases/latest)**
 3. Double-click to run - no admin rights needed once WSL is up.
-4. Double-click the **Kivun Terminal** desktop shortcut, or right-click any folder → **Open with Kivun Terminal**.
+4. Double-click the **Kivun Terminal** desktop shortcut → pick a folder (browse the tree or paste a Windows path in the same dialog), or right-click any folder in File Explorer → **Open with Kivun Terminal** (skips the picker).
 
 > **Windows 11 - Smart App Control may block the installer.** If you see *"Smart App Control blocked an app that may be unsafe"* (clicking *Ok* dismisses it without an *override* option), the installer is unsigned and SAC won't allow unknown apps at all. To install: open **Start** → search **Smart App Control** → set it to **Off**. SAC cannot be re-enabled without reinstalling Windows, so leave it Off only if you're comfortable running other unsigned apps. See [SmartScreen warning](#windows-smartscreen) below for the milder warning you'll get with SAC off.
 
@@ -244,7 +253,7 @@ The surfaces (generic browser DOM, Claude.ai web UI, VS Code / IDE webview, Micr
 - ✅ פרופיל Konsole בצבעי Kivun (תכלת בהיר, נעים לעין)
 - ✅ סטטוסליין חי בתחתית המסך (מודל פעיל, אחוז קונטקסט, מגבלות שימוש)
 - ✅ קיצור דרך לשולחן העבודה + תפריט קליק ימני על תיקיות
-- ✅ Folder picker - בחירת תיקיית עבודה לפני ההפעלה
+- ✅ Folder picker - דיאלוג אחד: עיון בעץ התיקיות או הקלדה/הדבקה של נתיב באותו חלון
 - ✅ Alt+Shift להחלפה בין עברית לאנגלית בתוך הטרמינל
 - ✅ נתמך על Windows ו-Linux (apt/dnf/pacman/zypper). תמיכת macOS הוסרה ב-v1.2.4 - ראו <a href="mac/README.md"><code>mac/README.md</code></a>
 

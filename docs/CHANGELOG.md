@@ -3,6 +3,23 @@
 All notable changes to Kivun Terminal are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.6] - 2026-05-05
+
+Two desktop-shortcut bugs reported on a fresh v1.2.5 install: cancelling the folder picker dropped the user into a minimized cmd window with an invisible `set /p` prompt; and on slower machines two Claude Code windows opened (one in Konsole, one in the launcher's cmd console) because the launcher's `pgrep`-based Konsole-detection raced.
+
+### Fixed: folder picker is now a single dialog with browse + paste
+
+- `payload/folder-picker.wsf` rewritten to use `BIF_NEWDIALOGSTYLE | BIF_EDITBOX` (flag mask 0x50) — Windows' modern folder browser with a labeled text-input field at the bottom of the same dialog. Users can browse the folder tree OR type/paste a Windows path. Cancel silently falls back to `%USERPROFILE%`.
+- `payload/kivun-terminal.bat` — removed the cmd-side `:picker_textinput` text-input fallback that v1.2.5 added. That fallback was correct logic but invisible UX: the desktop shortcut launches the .bat with `SW_SHOWMINIMIZED`, so any `set /p` prompt sat in a minimized window the user could not see. All path-collection UI now lives in `folder-picker.wsf` as Win32 dialogs that pop above any minimized parent.
+
+### Fixed: only one Claude Code window opens
+
+- `payload/kivun-terminal.bat` — removed the racy post-launch `pgrep -x konsole` polling and its `:run_direct` fall-through. The polling had a 13-second timeout and on slower systems would return non-zero before Konsole actually registered, so the launcher spawned a SECOND `claude` directly in the parent cmd while Konsole eventually started with its own Claude inside it. The bash launcher (`kivun-launch.sh`) writes its own progress to `BASH_LAUNCH_LOG.txt`, so genuine Konsole failures are still diagnosable from logs. The `.bat` no longer second-guesses; it spawns `kivun-launch.sh` async and exits cleanly. The `:run_direct` label is preserved for hard failures reached via explicit `goto :run_direct` (e.g. Konsole apt-install failure during launch).
+
+### Documentation
+
+- New **"What's included out of the box"** section in the README, advertising the launcher UX (folder picker dialog with browse+paste, right-click menu, statusline, theme, BiDi wrapper, auto-install) before any technical content. Matches the user's request for parity with the sibling `kivun-terminal` README.
+
 ## [1.2.5] - 2026-05-05
 
 Two desktop-shortcut bugs reported on a fresh v1.2.4 install: the launcher always opened in `%USERPROFILE%`, never the user's chosen folder; and the 2-line statusline rendered as a single line (project/model/context only, with the session/weekly usage row clipped).

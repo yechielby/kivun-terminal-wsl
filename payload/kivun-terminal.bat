@@ -112,6 +112,12 @@ if not exist "%~dp0folder-picker.wsf" (
     call :LOG "WARNING - folder-picker.wsf not found in install dir, skipping picker"
     goto :picker_done
 )
+REM folder-picker.wsf handles BOTH the BrowseForFolder dialog AND the
+REM cancel-fallback InputBox prompt itself, in dialog UI. We deliberately
+REM do NOT prompt from the .bat: the desktop shortcut launches us with
+REM SW_SHOWMINIMIZED, so any `set /p` prompt would sit in a minimized
+REM cmd window the user cannot see. The .wsf renders all UI as
+REM top-level dialogs that pop above any minimized parent.
 cscript //Nologo "%~dp0folder-picker.wsf" >nul 2>&1
 if not exist "%LOCALAPPDATA%\Kivun-WSL\kivun-workdir.txt" (
     call :LOG "INFO - User cancelled folder picker, using default: %WORK_DIR%"
@@ -121,7 +127,7 @@ set "PICKED="
 set /p PICKED=<"%LOCALAPPDATA%\Kivun-WSL\kivun-workdir.txt"
 del "%LOCALAPPDATA%\Kivun-WSL\kivun-workdir.txt" >nul 2>&1
 if not defined PICKED (
-    call :LOG "INFO - User cancelled folder picker, using default: %WORK_DIR%"
+    call :LOG "INFO - Picker file empty, using default: %WORK_DIR%"
     goto :picker_done
 )
 set "WORK_DIR=%PICKED%"
@@ -444,31 +450,22 @@ if %ERRORLEVEL% EQU 0 (
     call :LOG "ERROR - Launch command failed (error %ERRORLEVEL%)"
 )
 
-REM Wait for Konsole to start (profile deploy + launch takes a few seconds)
-call :LOG "INFO - Waiting 8 seconds for Konsole to start"
-timeout /t 8 /nobreak >nul
-
-REM Check if a konsole process is running inside WSL
-call :LOG "INFO - Checking if Konsole process is running"
-wsl -d Ubuntu -- bash -c "pgrep -x konsole" 2>&1 >> "%LOG_FILE%"
-if %ERRORLEVEL% EQU 0 (
-    call :LOG "SUCCESS - Konsole is running"
-    exit
-)
-
-REM Retry check - konsole may still be starting
-call :LOG "INFO - Konsole not detected yet, waiting 5 more seconds"
-timeout /t 5 /nobreak >nul
-wsl -d Ubuntu -- bash -c "pgrep -x konsole" 2>&1 >> "%LOG_FILE%"
-if %ERRORLEVEL% EQU 0 (
-    call :LOG "SUCCESS - Konsole is running (detected on second check)"
-    exit
-)
-call :LOG "WARNING - Konsole process not detected, may not have started (WSLg issue?)"
-
-echo.
-echo Konsole did not start (WSLg may not be available on this PC).
-echo.
+REM kivun-launch.sh has been spawned async. We deliberately do NOT poll
+REM for it to confirm Konsole is up:
+REM   - pgrep had a 13-second timeout and races on slow systems. When
+REM     pgrep returned empty (Konsole still starting), the launcher
+REM     fell through to :run_direct and spawned a SECOND claude in this
+REM     cmd window. User-reported result: two Claude instances visible.
+REM   - kivun-launch.sh writes its own progress to BASH_LAUNCH_LOG.txt;
+REM     if Konsole fails to launch the user can inspect that log.
+REM   - The :run_direct label below is still kept for HARD failures
+REM     reached via explicit `goto :run_direct` earlier in this script
+REM     (e.g. Konsole apt-install failure during this very launch).
+REM
+REM Trust the bash launcher. Exit cleanly so the cmd window closes and
+REM Konsole becomes the only visible Claude window.
+call :LOG "INFO - kivun-launch.sh spawned; trusting it to handle Konsole"
+exit /b 0
 
 :run_direct
 call :LOG "INFO - Falling back to direct Claude execution in WSL terminal"

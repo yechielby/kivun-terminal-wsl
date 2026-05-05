@@ -1,27 +1,47 @@
 <job>
-<script language="JScript">
-// Kivun Terminal - Folder Picker
-// Shows native Windows folder-browse dialog; writes the chosen path to
-// %LOCALAPPDATA%\Kivun-WSL\kivun-workdir.txt as UTF-8 without BOM.
-// Invoked when FOLDER_PICKER=true in config.txt and no folder was passed
-// via right-click. Read back by kivun-terminal.bat.
-// Run with: cscript //nologo folder-picker.wsf
+<!--
+  Kivun Terminal - Folder Picker
 
+  Single dialog: Windows' modern BrowseForFolder with the EDITBOX flag
+  enabled. The user can browse the folder tree OR type/paste a path
+  directly into a text field at the bottom of the same dialog — both
+  options are visible and labeled. No separate "Cancel -> fallback ->
+  Type a path" popup chain.
+
+  Flags passed to BrowseForFolder:
+    0x0040  BIF_NEWDIALOGSTYLE  — modern dialog (resizable, text input)
+    0x0010  BIF_EDITBOX         — adds a labeled text input for the path
+    Combined: 0x0050 = 80 decimal
+
+  Behavior:
+    - User selects a folder (tree or text) and clicks OK -> path written,
+      echo OK.
+    - User clicks Cancel, closes the dialog, or types a non-existent path
+      and clicks OK -> Windows returns null. We echo CANCELLED. The
+      launcher's caller treats CANCELLED as "use the default working
+      directory" (%USERPROFILE%).
+
+  Why one dialog instead of cascading: the previous design popped the
+  picker, then on Cancel popped a Yes/No, then popped an InputBox. Three
+  separate dialogs to reach the same outcome. EDITBOX collapses that
+  into one — and matches what users are used to from File Explorer's
+  address bar (browse OR type).
+
+  Note: SW_SHOWMINIMIZED on the parent cmd would hide any console-side
+  prompt, which is exactly why we use Win32 dialogs here. They render
+  as top-level windows above the minimized parent.
+
+  Output: %LOCALAPPDATA%\Kivun-WSL\kivun-workdir.txt as UTF-8 without
+  BOM. The launcher reads it back; missing file = treat as cancellation.
+
+  Run with: cscript //nologo folder-picker.wsf
+-->
+<script language="JScript">
 var wshShell = new ActiveXObject("WScript.Shell");
 var fso = new ActiveXObject("Scripting.FileSystemObject");
 var shell = new ActiveXObject("Shell.Application");
 
 var startPath = wshShell.ExpandEnvironmentStrings("%USERPROFILE%");
-
-var folder = shell.BrowseForFolder(0, "Select folder for Kivun Terminal", 0, startPath);
-
-if (folder == null) {
-    WScript.Echo("CANCELLED");
-    WScript.Quit();
-}
-
-var selectedPath = folder.Self.Path;
-
 var kivunDir = wshShell.ExpandEnvironmentStrings("%LOCALAPPDATA%") + "\\Kivun-WSL";
 var filePath = kivunDir + "\\kivun-workdir.txt";
 
@@ -29,17 +49,37 @@ if (!fso.FolderExists(kivunDir)) {
     fso.CreateFolder(kivunDir);
 }
 
+// BIF_NEWDIALOGSTYLE | BIF_EDITBOX — modern dialog with built-in text
+// input. The "Folder:" edit field at the bottom accepts pasted paths
+// (e.g. C:\Projects\WebApp), tab-completion, and drag-and-drop.
+var BIF_FLAGS = 0x40 + 0x10;
+
+var folder = shell.BrowseForFolder(
+    0,
+    "Path: type or paste a Windows path in the field at the bottom, or browse the tree above. Then click OK.",
+    BIF_FLAGS,
+    startPath
+);
+
+if (folder == null) {
+    // User cancelled, closed the dialog, or typed an invalid path.
+    WScript.Echo("CANCELLED");
+    WScript.Quit();
+}
+
+var selectedPath = folder.Self.Path;
+
+// UTF-8-without-BOM write. ADODB.Stream's "utf-8" charset emits a 3-byte
+// BOM by default; we copy the post-BOM bytes into a binary stream and
+// save that. Matches the original v1.x folder-picker behavior exactly.
 var stream = new ActiveXObject("ADODB.Stream");
 stream.Type = 2;
 stream.Charset = "utf-8";
 stream.Open();
 stream.WriteText(selectedPath);
-
-// Strip the 3-byte UTF-8 BOM before saving
 stream.Position = 0;
 stream.Type = 1;
 stream.Position = 3;
-
 var outStream = new ActiveXObject("ADODB.Stream");
 outStream.Type = 1;
 outStream.Open();
