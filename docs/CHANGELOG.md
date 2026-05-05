@@ -3,6 +3,28 @@
 All notable changes to Kivun Terminal are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.3.1] - 2026-05-05
+
+### Folder picker dialog: visual polish + clearer flow
+
+User reported the v1.3.0 dialog had three problems: em-dashes and ellipses rendered as `ג€"` mojibake (mshta defaulted to a non-UTF-8 codepage), button captions were clipped (`Edit Default` instead of `Edit Default Flags`), and the path text field was too narrow to display a real Windows path. Plus *"needs to be clear if a tree will show or a path pasted and then starts."*
+
+- **`payload/folder-picker.hta`** — rebuilt the layout:
+  - `<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">` + ASCII-only dialog text (no em-dashes, no ellipses) so glyphs render correctly under any system codepage.
+  - Window is now 880×340 (up from 640×240). The path input is monospace, larger padding, focus-ring, and takes the full row width minus the Browse button. Buttons get min-widths sized to their actual labels (`Edit Default Flags` 180px, `Launch Kivun Terminal` 180px) so no clipping.
+  - Numbered hint text spells out the flow: *"1. Paste a Windows path below or click Browse to pick from the folder tree. 2. Click Launch (or press Enter) to start."* Optional: *"click Edit Default Flags to change the default claude flags in config.txt before launching."*
+  - Primary action button renamed `OK` → `Launch Kivun Terminal` so the "what happens next" is unambiguous. Visual hierarchy: Edit Default Flags on the left, Cancel + Launch on the right, separated from the path row by a horizontal rule.
+
+### Config parser robustness: accept LF-only `config.txt`
+
+Live-debugging revealed the launcher was logging `folderpicker=false, vcxsrv=false` even when `config.txt` clearly had `FOLDER_PICKER=true` and `USE_VCXSRV=true`. Cause: the parser piped `type config.txt | findstr /v "^#"`, and on an LF-only `config.txt` (the form `cp` from WSL/Linux produces) Windows' `findstr` treated the entire file as one giant comment-line starting with `#`, returning nothing. Every config key fell back to its compiled-in default.
+
+- **`payload/kivun-terminal.bat`** — replaced the `type | findstr` pipeline with `for /f "usebackq eol=# tokens=1,2 delims=="`. `for /f` reading a file via `usebackq` handles both LF and CRLF correctly, and `eol=#` skips comments without needing `findstr`. The pipe-form bug was invisible in CI because the NSI installer ships CRLF files; it only surfaced when a user (or our deploy script) `cp`'d the source `.txt` to the install dir.
+
+### Right-click flow is unaffected
+
+When a folder is passed via `%1` (the right-click "Open with Kivun Terminal" path), the picker dialog is skipped entirely. v1.3.1 changes only the dialog flow, not the launcher entry points.
+
 ## [1.3.0] - 2026-05-05
 
 ### Folder picker: dialog with built-in "Edit Default Flags…" button

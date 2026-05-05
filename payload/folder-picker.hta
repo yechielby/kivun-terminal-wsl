@@ -1,26 +1,27 @@
 <!DOCTYPE html>
 <!--
-  Kivun Terminal - Folder Picker (HTA dialog with Edit Default Flags button)
+  Kivun Terminal - Folder Picker (HTA dialog)
 
-  Replaces folder-picker.wsf in v1.3.0+. Same writeback contract:
-  on OK with a valid folder, writes the path to
-  %LOCALAPPDATA%\Kivun-WSL\kivun-workdir.txt as UTF-8 without BOM,
-  then exits. On Cancel, exits without writing — the launcher's .bat
-  treats a missing file as cancellation and falls back to %USERPROFILE%.
+  v1.3.1 fixes the v1.3.0 mojibake issue: em-dashes and ellipses
+  rendered as "ג€" / "ג€¦" because mshta defaulted to a non-UTF-8
+  legacy codepage. We now use ASCII-only text plus an explicit
+  UTF-8 meta tag, and the button captions are short enough not to
+  clip at 88px min-width.
 
-  Why HTA: native BrowseForFolder doesn't allow custom buttons. To put
-  an "Edit Default Flags" button next to Browse + OK + Cancel, we need
-  our own dialog window. HTA gives full HTML/CSS/JS control with the
-  same Shell.Application/Scripting.FileSystemObject/ADODB.Stream
-  ActiveX objects we used in the .wsf. mshta.exe ships with every
-  Windows 11 install.
+  Same writeback contract as folder-picker.wsf: on OK with a valid
+  folder, writes the path to %LOCALAPPDATA%\Kivun-WSL\kivun-workdir.txt
+  as UTF-8 without BOM. On Cancel, exits without writing - the
+  launcher .bat treats a missing file as cancellation and falls back
+  to %USERPROFILE%.
 
   Run with: mshta.exe folder-picker.hta
   (use `start /wait mshta.exe ...` from a .bat to block on close)
 -->
 <html>
 <head>
-<title>Kivun Terminal — Pick Folder</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<title>Kivun Terminal - Pick Folder</title>
 <HTA:APPLICATION
   ID="KivunPicker"
   APPLICATIONNAME="Kivun Terminal Folder Picker"
@@ -38,69 +39,118 @@
   WINDOWSTATE="normal"
 />
 <style>
+  html, body { height: 100%; }
   body {
-    font-family: "Segoe UI", Arial, sans-serif;
+    font-family: "Segoe UI", "Segoe UI Variable", Arial, sans-serif;
     font-size: 13px;
     margin: 0;
-    padding: 14px 16px;
+    padding: 22px 28px;
     background: #f3f3f3;
     color: #1c1c1c;
+    box-sizing: border-box;
   }
   h1 {
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 600;
-    margin: 0 0 10px 0;
+    margin: 0 0 6px 0;
+    color: #1c1c1c;
   }
   .hint {
     font-size: 12px;
     color: #5a5a5a;
-    margin: 0 0 8px 0;
+    margin: 0 0 18px 0;
+    line-height: 1.5;
+  }
+  .hint code, .hint kbd {
+    font-family: "Consolas", "Cascadia Mono", monospace;
+    font-size: 12px;
+    background: #e8e8e8;
+    padding: 1px 5px;
+    border-radius: 3px;
   }
   .row {
     display: flex;
     align-items: center;
-    gap: 6px;
-    margin-bottom: 10px;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+  .label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #1c1c1c;
+    min-width: 50px;
   }
   input[type=text] {
     flex: 1;
-    padding: 5px 7px;
-    font-family: "Segoe UI", Arial, sans-serif;
-    font-size: 13px;
+    padding: 9px 12px;
+    font-family: "Consolas", "Cascadia Mono", "Segoe UI", monospace;
+    font-size: 14px;
     border: 1px solid #b8b8b8;
     background: #fff;
+    min-width: 0;
+    border-radius: 3px;
+    transition: border-color 0.15s;
+  }
+  input[type=text]:focus {
+    outline: none;
+    border-color: #0078d4;
+    box-shadow: 0 0 0 1px #0078d4;
   }
   button {
-    padding: 5px 14px;
+    padding: 7px 16px;
     font-family: "Segoe UI", Arial, sans-serif;
     font-size: 13px;
     background: #fafafa;
     border: 1px solid #b8b8b8;
     cursor: pointer;
-    min-width: 88px;
+    white-space: nowrap;
+    border-radius: 3px;
+    transition: background 0.15s, border-color 0.15s;
   }
-  button:hover { background: #eaeaea; }
-  button.primary { background: #0078d4; color: #fff; border-color: #005a9e; }
-  button.primary:hover { background: #1186e0; }
+  button:hover { background: #eaeaea; border-color: #888; }
+  button:active { background: #d8d8d8; }
+  button.primary {
+    background: #0078d4;
+    color: #fff;
+    border-color: #005a9e;
+    font-weight: 600;
+  }
+  button.primary:hover { background: #1186e0; border-color: #00467a; }
+  button.primary:active { background: #005a9e; }
+  button.browse { min-width: 110px; }
+  button.config { min-width: 180px; }
+  button.cancel { min-width: 90px; }
+  button.ok { min-width: 180px; }
   .actions {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: 6px;
+    margin-top: 8px;
+    padding-top: 14px;
+    border-top: 1px solid #d8d8d8;
   }
-  .actions .right { display: flex; gap: 6px; }
-  .err { color: #b00; font-size: 12px; min-height: 14px; margin: 4px 0 0 0; }
+  .actions .right { display: flex; gap: 8px; }
+  .err {
+    color: #b00020;
+    font-size: 12px;
+    min-height: 18px;
+    margin: 8px 0 0 0;
+    font-weight: 500;
+  }
 </style>
 <script language="JScript">
-  // Sized for a 6-row dialog at 96 DPI.
-  window.resizeTo(640, 240);
+  // 880x340 gives the path field full-line breathing room AND two
+  // visually distinct rows (path + actions) with proper section
+  // separator. v1.3.0 was 640x240; v1.3.1 prototyped at 720x260 still
+  // clipped "Edit Default Flags".
+  window.resizeTo(880, 340);
 
   var wshShell = new ActiveXObject("WScript.Shell");
   var fso = new ActiveXObject("Scripting.FileSystemObject");
   var shell = new ActiveXObject("Shell.Application");
 
-  // Resolve install dir from the URL of this HTA so we can find
-  // sibling files (config.txt) without an absolute path.
+  // Resolve install dir from the URL of this HTA so config.txt lookups
+  // are relative and don't need an absolute path.
   function getInstallDir() {
     var url = decodeURIComponent(location.pathname).replace(/^\//, "").replace(/\//g, "\\");
     return fso.GetParentFolderName(url);
@@ -115,8 +165,8 @@
     fso.CreateFolder(kivunDir);
   }
 
-  // Same UTF-8-without-BOM write as folder-picker.wsf for compat with
-  // the launcher's `set /p PICKED=<file` reader.
+  // UTF-8-without-BOM write. Same code as the original .wsf so the
+  // launcher's `set /p PICKED=<file` reader sees the same bytes.
   function writePath(p) {
     var stream = new ActiveXObject("ADODB.Stream");
     stream.Type = 2;
@@ -147,11 +197,11 @@
     clearError();
     var startPath = wshShell.ExpandEnvironmentStrings("%USERPROFILE%");
     // BIF_NEWDIALOGSTYLE | BIF_EDITBOX = 0x50. Modern dialog with its
-    // own embedded edit field — even from within the HTA's Browse
-    // button users still have both modes available.
+    // own embedded edit field as a fallback path-typing affordance.
     var folder = shell.BrowseForFolder(0, "Pick a folder", 0x50, startPath);
     if (folder != null) {
       document.getElementById("path").value = folder.Self.Path;
+      document.getElementById("path").focus();
     }
   }
 
@@ -161,9 +211,9 @@
       showError("config.txt not found at " + configFile);
       return;
     }
-    // Open Notepad async — user edits at their own pace, picker stays
-    // open. Notepad-3rd-party (Notepad++/VS Code) take over via the
-    // user's .txt file association if they've changed it.
+    // Open Notepad async (window style 1 = visible normal). User edits
+    // at their own pace; the picker stays open in front. Notepad-3rd-
+    // party (Notepad++/VS Code) opens via the user's .txt association.
     wshShell.Run("notepad.exe \"" + configFile + "\"", 1, false);
   }
 
@@ -175,10 +225,12 @@
     p = p.replace(/^"+|"+$/g, "");        // strip surrounding quotes
     if (p == "") {
       showError("Enter a folder path or click Browse.");
+      document.getElementById("path").focus();
       return;
     }
     if (!fso.FolderExists(p)) {
       showError("Folder does not exist: " + p);
+      document.getElementById("path").focus();
       return;
     }
     writePath(p);
@@ -186,14 +238,17 @@
   }
 
   function cancel() {
-    // No file written -> launcher treats this as cancellation and falls
-    // back to %USERPROFILE%.
+    // No file written -> launcher treats this as cancellation and
+    // falls back to %USERPROFILE%.
     window.close();
   }
 
-  // Pressing Enter in the text field triggers OK; Esc triggers Cancel.
+  // Enter on the path field submits; Esc cancels. event.keyCode 13 =
+  // Enter, 27 = Esc. HTA renders in IE compatibility, so window.event
+  // works as a fallback if the parameter is null.
   function onKey(ev) {
-    var k = ev.keyCode;
+    var e = ev || window.event;
+    var k = e.keyCode;
     if (k == 13) { ok(); return false; }
     if (k == 27) { cancel(); return false; }
     return true;
@@ -206,16 +261,21 @@
 </head>
 <body onload="init()">
   <h1>Pick a folder for Kivun Terminal</h1>
-  <p class="hint">Type or paste a Windows path, or click <b>Browse…</b> to use the folder tree. Default Claude flags live in <code>config.txt</code> — click <b>Edit Default Flags…</b> to change them.</p>
+  <p class="hint">
+    <b>1.</b> Paste a Windows path below <b>or</b> click <b>Browse</b> to pick from the folder tree.
+    &nbsp;&nbsp;<b>2.</b> Click <b>Launch</b> (or press <kbd>Enter</kbd>) to start.<br />
+    Optional: click <b>Edit Default Flags</b> to change the default <code>claude</code> flags in <code>config.txt</code> before launching.
+  </p>
   <div class="row">
+    <span class="label">Path:</span>
     <input type="text" id="path" onkeydown="return onKey(event)" placeholder="C:\Users\you\Documents\MyProject" />
-    <button onclick="browseFolder()">Browse…</button>
+    <button class="browse" onclick="browseFolder()">Browse...</button>
   </div>
   <div class="actions">
-    <button onclick="editConfig()">Edit Default Flags…</button>
+    <button class="config" onclick="editConfig()">Edit Default Flags</button>
     <div class="right">
-      <button onclick="cancel()">Cancel</button>
-      <button class="primary" onclick="ok()">OK</button>
+      <button class="cancel" onclick="cancel()">Cancel</button>
+      <button class="primary ok" onclick="ok()">Launch Kivun Terminal</button>
     </div>
   </div>
   <p class="err" id="err"></p>

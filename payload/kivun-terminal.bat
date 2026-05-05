@@ -78,7 +78,15 @@ if exist "%~dp0config.txt" (
     REM would execute `calc.exe` during config load. The quoted form
     REM `set "X=%%b"` treats the contents as literal (& | ^ < > are
     REM all safe inside the quotes).
-    for /f "tokens=1,2 delims==" %%a in ('type "%~dp0config.txt" 2^>nul ^| findstr /v "^#"') do (
+    REM
+    REM v1.3.1: read the file directly via for /f "eol=#" instead of
+    REM piping through `type ... | findstr /v "^#"`. The pipe-form
+    REM treated LF-only configs (which `cp` from Linux/WSL produces)
+    REM as a single line — findstr saw it start with # and filtered
+    REM the entire file out, leaving every config key at its compiled-
+    REM in default. Reading the file directly via for /f handles both
+    REM LF and CRLF; eol=# skips comments without findstr.
+    for /f "usebackq eol=# tokens=1,2 delims==" %%a in ("%~dp0config.txt") do (
         if "%%a"=="RESPONSE_LANGUAGE"     set "RESPONSE_LANGUAGE=%%b"
         if "%%a"=="PRIMARY_LANGUAGE"      set "PRIMARY_LANGUAGE=%%b"
         if "%%a"=="USE_VCXSRV"            set "USE_VCXSRV=%%b"
