@@ -1,4 +1,4 @@
-# Kivun Terminal v1.2.4 - Full Installation Guide
+# Kivun Terminal v1.3.5 - Full Installation Guide
 
 ## System Requirements
 
@@ -57,7 +57,7 @@ On the first launch, Ubuntu prompts you in a terminal to create a username and p
 
 Three ways to start:
 
-- **Desktop shortcut** - double-click `Kivun Terminal`. Opens in `%USERPROFILE%`.
+- **Desktop shortcut** - double-click `Kivun Terminal`. Opens a folder picker dialog: type/paste a Windows path or browse the tree, then click **Launch Kivun Terminal**. Cancel falls back to `%USERPROFILE%`. The same dialog has an **Edit Default Flags** button that opens `config.txt` for editing.
 - **Right-click a folder** - choose *Open with Kivun Terminal* (if you enabled this component). Opens in that folder.
 - **From CMD** - `"%LOCALAPPDATA%\Kivun-WSL\kivun-terminal.bat" "C:\path\to\project"`.
 
@@ -68,11 +68,16 @@ On first launch, Claude Code will prompt you to authenticate with your Pro/Max s
 Edit `%LOCALAPPDATA%\Kivun-WSL\config.txt`:
 
 ```ini
+CLAUDE_FLAGS=                  # space-separated flags appended to every claude invocation; e.g. --model opus --continue
+FOLDER_PICKER=true             # show the picker dialog from the desktop shortcut; false skips and opens in %USERPROFILE%
 PRIMARY_LANGUAGE=hebrew        # or arabic, persian, urdu, pashto, kurdish, dari, uyghur, sindhi, azerbaijani
 RESPONSE_LANGUAGE=english      # controls --append-system-prompt sent to Claude
 TEXT_DIRECTION=rtl             # rtl = Hebrew/Arabic input hugs right edge; ltr = default
 USE_VCXSRV=false               # true requires VcXsrv installed (manual install - see Step 3)
+AUTO_INSTALL_CLAUDE=true       # auto-install Claude Code on first launch if missing
 ```
+
+The full reference list (~25 supported Claude flags from `claude --help`) lives at the bottom of `config.txt`.
 
 Save, then close and reopen Kivun Terminal for changes to take effect.
 
