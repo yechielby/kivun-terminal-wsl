@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<!--
+  Kivun Terminal - Folder Picker (HTA dialog)
+
+  v1.3.1 fixes the v1.3.0 mojibake issue: em-dashes and ellipses
+  rendered as "ג€" / "ג€¦" because mshta defaulted to a non-UTF-8
+  legacy codepage. We now use ASCII-only text plus an explicit
+  UTF-8 meta tag, and the button captions are short enough not to
+  clip at 88px min-width.
+
+  Same writeback contract as folder-picker.wsf: on OK with a valid
+  folder, writes the path to %LOCALAPPDATA%\Kivun-WSL\kivun-workdir.txt
+  as UTF-8 without BOM. On Cancel, exits without writing - the
+  launcher .bat treats a missing file as cancellation and falls back
+  to %USERPROFILE%.
+
+  Run with: mshta.exe folder-picker.hta
+  (use `start /wait mshta.exe ...` from a .bat to block on close)
+-->
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<title>Kivun Terminal - Pick Folder</title>
+<HTA:APPLICATION
+  ID="KivunPicker"
+  APPLICATIONNAME="Kivun Terminal Folder Picker"
+  BORDER="dialog"
+  CAPTION="yes"
+  CONTEXTMENU="no"
+  INNERBORDER="no"
+  MAXIMIZEBUTTON="no"
+  MINIMIZEBUTTON="no"
+  SCROLL="no"
+  SELECTION="no"
+  SHOWINTASKBAR="yes"
+  SINGLEINSTANCE="yes"
+  SYSMENU="yes"
+  WINDOWSTATE="normal"
+/>
+<style>
+  html, body { height: 100%; }
+  body {
+    font-family: "Segoe UI", "Segoe UI Variable", Arial, sans-serif;
+    font-size: 17px;
+    margin: 0;
+    padding: 26px 36px;
+    background: #f3f3f3;
+    color: #1c1c1c;
+    box-sizing: border-box;
+  }
+  h1 {
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0 0 12px 0;
+    color: #1c1c1c;
+  }
+  .hint {
+    font-size: 16px;
+    color: #404040;
+    margin: 0 0 24px 0;
+    line-height: 1.5;
+  }
+  .hint code, .hint kbd {
+    font-family: "Consolas", "Cascadia Mono", monospace;
+    font-size: 15px;
+    background: #e8e8e8;
+    padding: 2px 7px;
+    border-radius: 3px;
+  }
+
+  .option {
+    background: #fff;
+    border: 1px solid #d4d4d4;
+    border-radius: 6px;
+    padding: 18px 20px;
+    margin-bottom: 4px;
+  }
+  .opt-label {
+    font-size: 17px;
+    font-weight: 600;
+    color: #1c1c1c;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .opt-num {
+    display: inline-block;
+    width: 28px;
+    height: 28px;
+    line-height: 28px;
+    text-align: center;
+    background: #0078d4;
+    color: #fff;
+    border-radius: 50%;
+    font-size: 15px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .or-sep {
+    text-align: center;
+    margin: 12px 0;
+    position: relative;
+  }
+  .or-sep:before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    border-top: 1px solid #cfcfcf;
+    z-index: 0;
+  }
+  .or-sep span {
+    position: relative;
+    display: inline-block;
+    padding: 0 18px;
+    background: #f3f3f3;
+    color: #606060;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    z-index: 1;
+  }
+
+  input[type=text] {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 13px 16px;
+    font-family: "Consolas", "Cascadia Mono", "Segoe UI", monospace;
+    font-size: 18px;
+    border: 1px solid #b8b8b8;
+    background: #fff;
+    border-radius: 4px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  input[type=text]:focus {
+    outline: none;
+    border-color: #0078d4;
+    box-shadow: 0 0 0 1px #0078d4;
+  }
+  button {
+    padding: 11px 20px;
+    font-family: "Segoe UI", Arial, sans-serif;
+    font-size: 16px;
+    background: #fafafa;
+    border: 1px solid #b8b8b8;
+    cursor: pointer;
+    white-space: nowrap;
+    border-radius: 4px;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  button:hover { background: #eaeaea; border-color: #888; }
+  button:active { background: #d8d8d8; }
+  button.primary {
+    background: #0078d4;
+    color: #fff;
+    border-color: #005a9e;
+    font-weight: 600;
+  }
+  button.primary:hover { background: #1186e0; border-color: #00467a; }
+  button.primary:active { background: #005a9e; }
+  button.browse { min-width: 230px; font-weight: 600; }
+  button.config { min-width: 220px; }
+  button.cancel { min-width: 110px; }
+  button.ok { min-width: 250px; font-size: 17px; }
+  .actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #d8d8d8;
+  }
+  .actions .right { display: flex; gap: 10px; }
+  .err {
+    color: #b00020;
+    font-size: 15px;
+    min-height: 20px;
+    margin: 10px 0 0 0;
+    font-weight: 500;
+  }
+</style>
+<script language="JScript">
+  // 1000x620 fits the larger v1.3.3 fonts (17px body, 18px input,
+  // 16px buttons, 24px headline). Earlier: 640x240 (v1.3.0),
+  // 880x340 (v1.3.1), 920x520 (v1.3.2).
+  window.resizeTo(1000, 620);
+
+  var wshShell = new ActiveXObject("WScript.Shell");
+  var fso = new ActiveXObject("Scripting.FileSystemObject");
+  var shell = new ActiveXObject("Shell.Application");
+
+  // Resolve install dir from the URL of this HTA so config.txt lookups
+  // are relative and don't need an absolute path.
+  function getInstallDir() {
+    var url = decodeURIComponent(location.pathname).replace(/^\//, "").replace(/\//g, "\\");
+    return fso.GetParentFolderName(url);
+  }
+
+  var installDir = getInstallDir();
+  var kivunDir = wshShell.ExpandEnvironmentStrings("%LOCALAPPDATA%") + "\\Kivun-WSL";
+  var resultFile = kivunDir + "\\kivun-workdir.txt";
+  var configFile = installDir + "\\config.txt";
+
+  if (!fso.FolderExists(kivunDir)) {
+    fso.CreateFolder(kivunDir);
+  }
+
+  // UTF-8-without-BOM write. Same code as the original .wsf so the
+  // launcher's `set /p PICKED=<file` reader sees the same bytes.
+  function writePath(p) {
+    var stream = new ActiveXObject("ADODB.Stream");
+    stream.Type = 2;
+    stream.Charset = "utf-8";
+    stream.Open();
+    stream.WriteText(p);
+    stream.Position = 0;
+    stream.Type = 1;
+    stream.Position = 3;
+    var outStream = new ActiveXObject("ADODB.Stream");
+    outStream.Type = 1;
+    outStream.Open();
+    stream.CopyTo(outStream);
+    outStream.SaveToFile(resultFile, 2);
+    outStream.Close();
+    stream.Close();
+  }
+
+  function clearError() {
+    document.getElementById("err").innerText = "";
+  }
+
+  function showError(msg) {
+    document.getElementById("err").innerText = msg;
+  }
+
+  function browseFolder() {
+    clearError();
+    var startPath = wshShell.ExpandEnvironmentStrings("%USERPROFILE%");
+    // BIF_NEWDIALOGSTYLE | BIF_EDITBOX = 0x50. Modern dialog with its
+    // own embedded edit field as a fallback path-typing affordance.
+    var folder = shell.BrowseForFolder(0, "Pick a folder", 0x50, startPath);
+    if (folder != null) {
+      document.getElementById("path").value = folder.Self.Path;
+      document.getElementById("path").focus();
+    }
+  }
+
+  function editConfig() {
+    clearError();
+    if (!fso.FileExists(configFile)) {
+      showError("config.txt not found at " + configFile);
+      return;
+    }
+    // Open Notepad async (window style 1 = visible normal). User edits
+    // at their own pace; the picker stays open in front. Notepad-3rd-
+    // party (Notepad++/VS Code) opens via the user's .txt association.
+    wshShell.Run("notepad.exe \"" + configFile + "\"", 1, false);
+  }
+
+  function ok() {
+    clearError();
+    var p = document.getElementById("path").value;
+    if (p == null) p = "";
+    p = p.replace(/^\s+|\s+$/g, "");      // trim
+    p = p.replace(/^"+|"+$/g, "");        // strip surrounding quotes
+    if (p == "") {
+      showError("Enter a folder path or click Browse.");
+      document.getElementById("path").focus();
+      return;
+    }
+    if (!fso.FolderExists(p)) {
+      showError("Folder does not exist: " + p);
+      document.getElementById("path").focus();
+      return;
+    }
+    writePath(p);
+    window.close();
+  }
+
+  function cancel() {
+    // No file written -> launcher treats this as cancellation and
+    // falls back to %USERPROFILE%.
+    window.close();
+  }
+
+  // Enter on the path field submits; Esc cancels. event.keyCode 13 =
+  // Enter, 27 = Esc. HTA renders in IE compatibility, so window.event
+  // works as a fallback if the parameter is null.
+  function onKey(ev) {
+    var e = ev || window.event;
+    var k = e.keyCode;
+    if (k == 13) { ok(); return false; }
+    if (k == 27) { cancel(); return false; }
+    return true;
+  }
+
+  function init() {
+    document.getElementById("path").focus();
+  }
+</script>
+</head>
+<body onload="init()">
+  <h1>Pick a folder for Kivun Terminal</h1>
+  <p class="hint">
+    Choose <b>one</b> of the two options below, then click <b>Launch Kivun Terminal</b> (or press <kbd>Enter</kbd>).
+  </p>
+
+  <div class="option">
+    <div class="opt-label"><span class="opt-num">1</span> Type or paste a Windows path here:</div>
+    <input type="text" id="path" onkeydown="return onKey(event)" placeholder="C:\Users\you\Documents\MyProject" />
+  </div>
+
+  <div class="or-sep"><span>OR</span></div>
+
+  <div class="option">
+    <div class="opt-label"><span class="opt-num">2</span> Pick a folder from the Windows folder tree:</div>
+    <button class="browse" onclick="browseFolder()">Browse Folder Tree...</button>
+  </div>
+
+  <div class="actions">
+    <button class="config" onclick="editConfig()">Edit Default Flags</button>
+    <div class="right">
+      <button class="cancel" onclick="cancel()">Cancel</button>
+      <button class="primary ok" onclick="ok()">Launch Kivun Terminal</button>
+    </div>
+  </div>
+  <p class="err" id="err"></p>
+</body>
+</html>

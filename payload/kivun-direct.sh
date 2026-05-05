@@ -3,6 +3,8 @@
 # Invoked from kivun-terminal.bat's :run_direct path.
 # $1 = Linux work directory (already wslpath-converted by the launcher)
 # $2 = Claude system-prompt string (language-specific)
+# $3 = Optional extra Claude flags (CLAUDE_FLAGS from config.txt;
+#      passed unquoted to claude so the shell word-splits "--a --b").
 #
 # We resolve the claude binary explicitly. The Anthropic curl installer
 # drops claude at ~/.local/bin/claude, which is NOT on the default PATH
@@ -41,12 +43,16 @@ fi
 
 cd "$1" 2>/dev/null || cd "$HOME"
 
+# $3 unquoted on purpose — bash word-splits "--continue --model opus"
+# into two argv entries. If $3 is empty, no extra args reach claude.
+EXTRA_FLAGS="${3:-}"
+
 if [ -x "$HOME/.local/bin/claude" ]; then
-    exec "$HOME/.local/bin/claude" --append-system-prompt "$2"
+    exec "$HOME/.local/bin/claude" --append-system-prompt "$2" $EXTRA_FLAGS
 elif [ -x /usr/local/bin/claude ]; then
-    exec /usr/local/bin/claude --append-system-prompt "$2"
+    exec /usr/local/bin/claude --append-system-prompt "$2" $EXTRA_FLAGS
 elif command -v claude >/dev/null 2>&1; then
-    exec claude --append-system-prompt "$2"
+    exec claude --append-system-prompt "$2" $EXTRA_FLAGS
 else
     echo "ERROR: claude binary not found in any of:" >&2
     echo "  \$HOME/.local/bin/claude" >&2

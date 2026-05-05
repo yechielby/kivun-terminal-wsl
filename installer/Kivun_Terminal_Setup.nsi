@@ -89,6 +89,7 @@ Section "Core Files" SEC_CORE
   File "..\payload\statusline.mjs"
   File "..\payload\configure-statusline.js"
   File "..\payload\folder-picker.wsf"
+  File "..\payload\folder-picker.hta"
   ; Window-icon override for VcXsrv (which ignores Konsole's empty icon
   ; and shows its own X). kivun-set-icon.py reads kivun-icon.png and
   ; writes _NET_WM_ICON via python-xlib. See payload/kivun-set-icon.py.
@@ -354,6 +355,14 @@ SectionEnd
 Section "Desktop Shortcut" SEC_SHORTCUT
   CreateShortcut "$DESKTOP\Kivun Terminal.lnk" "$INSTDIR\kivun-terminal.bat" "" "$INSTDIR\kivun_icon.ico" 0 SW_SHOWMINIMIZED "" "Launch Kivun Terminal"
   CreateShortcut "$SMPROGRAMS\Kivun Terminal.lnk" "$INSTDIR\kivun-terminal.bat" "" "$INSTDIR\kivun_icon.ico" 0 SW_SHOWMINIMIZED "" "Launch Kivun Terminal"
+
+  ; v1.2.9 added a standalone "Edit Kivun Terminal Config" Start Menu
+  ; shortcut. v1.3.0 removes it: the same capability is now an "Edit
+  ; Default Flags…" button INSIDE the folder-picker HTA dialog, which
+  ; matches the user's original ask ("a button on the browse to get
+  ; there"). Two entry points to the same Notepad-on-config flow was
+  ; redundant and created confusion ("Notepad opens immediately before
+  ; the user picks a folder").
 SectionEnd
 
 Section /o "Right-Click Menu Integration" SEC_RCLICK
@@ -388,9 +397,12 @@ Section "Uninstall"
   ; point at the same folders we wrote to.
   SetShellVarContext current
 
-  ; Remove shortcuts
+  ; Remove shortcuts. The "Edit Kivun Terminal Config.lnk" was created
+  ; by v1.2.9 only and removed in v1.3.0 — uninstalling here cleans up
+  ; for users who installed v1.2.9 and then upgraded.
   Delete "$DESKTOP\Kivun Terminal.lnk"
   Delete "$SMPROGRAMS\Kivun Terminal.lnk"
+  Delete "$SMPROGRAMS\Edit Kivun Terminal Config.lnk"
 
   ; Remove registry entries
   DeleteRegKey HKCU "Software\Classes\Directory\shell\KivunTerminal"
@@ -398,6 +410,7 @@ Section "Uninstall"
   DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\KivunTerminal"
 
   ; Remove installed files
+  Delete "$INSTDIR\folder-picker.hta"
   Delete "$INSTDIR\kivun-terminal.bat"
   Delete "$INSTDIR\kivun-launch.sh"
   Delete "$INSTDIR\kivun-direct.sh"

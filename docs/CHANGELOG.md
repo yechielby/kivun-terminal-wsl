@@ -3,6 +3,201 @@
 All notable changes to Kivun Terminal are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.3.5] - 2026-05-05
+
+### Roll back to v1.3.3 picker; drop icon attempt entirely
+
+User feedback after v1.3.4: *"now it opens immediately again"* (Konsole launching with default home directory because mshta exited in 0.24s without rendering the dialog) and *"we rewinded to the html that worked, not windows folder picker and not the failing trying to add an icon. we accept not useing an icon to prevent complications."*
+
+v1.3.4's icon-fix attempt (moving `<HTA:APPLICATION>` to the first child of `<head>` and `pushd`'ing into the install dir before invoking `mshta.exe "folder-picker.hta"`) broke the picker on this user's machine — the dialog never displayed and the launcher fell straight through to the home-directory default.
+
+v1.3.5 reverts to v1.3.3's known-good state and **removes all icon plumbing entirely** per the user's preference:
+
+- **`payload/folder-picker.hta`** — restored to the v1.3.3 HTA (large two-card layout with numbered options, Browse Folder Tree, Edit Default Flags, Launch Kivun Terminal). Stripped: `HTA:APPLICATION ICON="kivun_icon.ico"`, `<link rel="shortcut icon" ...>`, `<link rel="icon" ...>`. The dialog now renders mshta's default red HTML scroll in the title bar — accepted as-is.
+- **`payload/kivun-terminal.bat`** — restored to v1.3.3's `mshta.exe "%~dp0folder-picker.hta"` direct invocation. No `pushd`/`popd` wrapping (which had introduced the cwd shift that defeated the picker's render).
+
+The Konsole window taskbar icon (set via `WM_CLASS` + `.desktop` file from `kivun-launch.sh`) is unaffected — the Konsole window keeps its proper Kivun icon. Only the picker dialog's title bar (which is open for a few seconds before Konsole launches) shows mshta's default icon.
+
+### Why this is the final word on the picker title-bar icon
+
+Across v1.3.0 → v1.3.4 we tried: `HTA:APPLICATION ICON=` alone, `<link rel="shortcut icon">`, `<link rel="icon">`, reordering `<HTA:APPLICATION>` to first-child of `<head>`, `pushd "%~dp0"` to fix relative-path resolution. The combinations that were robust enough to render reliably (v1.3.3) didn't change the icon; the combinations that *might* have fixed the icon (v1.3.4) broke the picker entirely. Modern Windows 11 mshta is hostile to title-bar icon customization without a binary wrapper, and adding a binary wrapper is out of scope for this project.
+
+## [1.3.4] - 2026-05-05
+
+### Picker dialog: actually try to make the title-bar icon work
+
+User feedback: *"looks good, just the logo was not added."*
+
+Two known mshta quirks combined to defeat the v1.3.3 icon attempt:
+
+1. **`<HTA:APPLICATION>` order**: mshta is sensitive to where the `<HTA:APPLICATION>` element sits in `<head>`. v1.3.3 had it after `<meta>`, `<link>`, and `<title>` — by which point mshta has often already chosen its window icon. Moved to the very first child of `<head>` in v1.3.4.
+2. **Working directory for relative `ICON=`**: `mshta.exe "C:\full\path\folder-picker.hta"` runs with the .bat's cwd, not the .hta's directory. The relative `ICON="kivun_icon.ico"` resolves against cwd; on a fresh launch from the desktop shortcut, cwd is `%SystemRoot%\System32` where there is no `kivun_icon.ico`, so the icon path fails and mshta falls back to its default red HTML scroll. v1.3.4 wraps the launch in `pushd "%~dp0"` / `popd` so cwd matches the install dir before mshta starts.
+
+If the icon still doesn't show after both of these, that's a deep mshta limitation that would need a binary wrapper (a tiny EXE compiled with the icon as a resource) — but that's a different scope of project than a launcher dialog. The Konsole window's taskbar icon (set via `WM_CLASS` + `.desktop` file) is unaffected and continues to work.
+
+## [1.3.3] - 2026-05-05
+
+### Three picker iteration fixes from continued user testing
+
+User feedback after v1.3.2: *"the logo is not added"*, *"seems like something opened before the user confirmed how to open"*, *"text can be bigger"*.
+
+- **`payload/folder-picker.hta`** — added `<link rel="shortcut icon" href="kivun_icon.ico">` and `<link rel="icon" ...>` in addition to the existing `HTA:APPLICATION ICON=`. Some Windows versions ignore the HTA icon attribute alone; the `<link>` tags pick up via mshta's HTML rendering. Combined coverage gives the title-bar/taskbar icon a better chance of rendering across mshta variants. (If the icon still doesn't show on a given Windows build, that's an mshta limitation that would need a binary wrapper to fully fix — out of scope for the launcher.)
+- **`payload/folder-picker.hta`** — font sizes bumped further: body 17px (was 15), headline 24px (was 20), path input 18px (was 16), buttons 16–17px, option labels 17px. Numbered circles enlarged to 28px. Window resized 1000×620 to fit comfortably.
+- **`payload/kivun-terminal.bat`** — picker invocation changed from `start /wait mshta.exe ...` to `mshta.exe ...` directly. cmd waits for the launched program by default; `start /wait` was unreliably synchronous in some configurations and could let the launcher proceed (WSL/Konsole launch) before the user finished with the picker dialog. Direct invocation guarantees the picker is fully closed before any subsequent step runs — no more "something opened before the user confirmed."
+
+## [1.3.2] - 2026-05-05
+
+### Folder picker dialog: two clearly-labeled options + bigger text
+
+User feedback on v1.3.1: *"not clear what opens the tree and what just goes by a path"* and *"test too small"* (text too small).
+
+- **`payload/folder-picker.hta`** — restructured the dialog around two numbered option cards instead of a single "label + input + button" row. Now there are two visually distinct cards:
+  1. *"Type or paste a Windows path here:"* with a full-row monospace text input.
+  2. *"Pick a folder from the Windows folder tree:"* with a "Browse Folder Tree..." button.
+  - Cards are visually separated by an "OR" divider line, removing any ambiguity about which control does what.
+  - Body font bumped to 15px (was 13px). Headline 20px. Path input 16px. Buttons 14–15px. Numbered circles next to each option label give visual anchor points.
+  - Window resized to 920×520 to comfortably fit the larger content. Cards have white backgrounds against the gray body, focus ring on the input, hover/active styles on all buttons.
+  - The primary action stays *"Launch Kivun Terminal"*; *"Edit Default Flags"* and *"Cancel"* unchanged.
+  - **Window now uses the Kivun icon** (`HTA:APPLICATION ICON="kivun_icon.ico"`) instead of mshta's default red HTML scroll. Visible in the dialog title bar and the Windows taskbar.
+
+## [1.3.1] - 2026-05-05
+
+### Folder picker dialog: visual polish + clearer flow
+
+User reported the v1.3.0 dialog had three problems: em-dashes and ellipses rendered as `ג€"` mojibake (mshta defaulted to a non-UTF-8 codepage), button captions were clipped (`Edit Default` instead of `Edit Default Flags`), and the path text field was too narrow to display a real Windows path. Plus *"needs to be clear if a tree will show or a path pasted and then starts."*
+
+- **`payload/folder-picker.hta`** — rebuilt the layout:
+  - `<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">` + ASCII-only dialog text (no em-dashes, no ellipses) so glyphs render correctly under any system codepage.
+  - Window is now 880×340 (up from 640×240). The path input is monospace, larger padding, focus-ring, and takes the full row width minus the Browse button. Buttons get min-widths sized to their actual labels (`Edit Default Flags` 180px, `Launch Kivun Terminal` 180px) so no clipping.
+  - Numbered hint text spells out the flow: *"1. Paste a Windows path below or click Browse to pick from the folder tree. 2. Click Launch (or press Enter) to start."* Optional: *"click Edit Default Flags to change the default claude flags in config.txt before launching."*
+  - Primary action button renamed `OK` → `Launch Kivun Terminal` so the "what happens next" is unambiguous. Visual hierarchy: Edit Default Flags on the left, Cancel + Launch on the right, separated from the path row by a horizontal rule.
+
+### Config parser robustness: accept LF-only `config.txt`
+
+Live-debugging revealed the launcher was logging `folderpicker=false, vcxsrv=false` even when `config.txt` clearly had `FOLDER_PICKER=true` and `USE_VCXSRV=true`. Cause: the parser piped `type config.txt | findstr /v "^#"`, and on an LF-only `config.txt` (the form `cp` from WSL/Linux produces) Windows' `findstr` treated the entire file as one giant comment-line starting with `#`, returning nothing. Every config key fell back to its compiled-in default.
+
+- **`payload/kivun-terminal.bat`** — replaced the `type | findstr` pipeline with `for /f "usebackq eol=# tokens=1,2 delims=="`. `for /f` reading a file via `usebackq` handles both LF and CRLF correctly, and `eol=#` skips comments without needing `findstr`. The pipe-form bug was invisible in CI because the NSI installer ships CRLF files; it only surfaced when a user (or our deploy script) `cp`'d the source `.txt` to the install dir.
+
+### Right-click flow is unaffected
+
+When a folder is passed via `%1` (the right-click "Open with Kivun Terminal" path), the picker dialog is skipped entirely. v1.3.1 changes only the dialog flow, not the launcher entry points.
+
+## [1.3.0] - 2026-05-05
+
+### Folder picker: dialog with built-in "Edit Default Flags…" button
+
+User feedback on v1.2.9: *"it opens immediately before the user picks a folder. not what he asked for."* — referring to the standalone "Edit Kivun Terminal Config" Start Menu shortcut, which opens Notepad without going through the picker. The original ask had been *"FROM THAT PICKER CAN IT REFRENCE THE TEXT FILE"* — a button **inside** the picker, not a separate launcher. v1.2.9 picked Option A (standalone shortcut) when Option B (button inside picker) was what the user actually wanted.
+
+v1.3.0 rebuilds Option B properly:
+
+- **NEW: `payload/folder-picker.hta`** — replaces the old `folder-picker.wsf` BrowseForFolder dialog. Custom HTA window with: a path text input, a **Browse…** button (still calls native `BrowseForFolder` for the folder tree), an **Edit Default Flags…** button (opens `config.txt` in Notepad asynchronously, picker stays open), **OK** with path-existence validation, **Cancel**. Same writeback contract as the .wsf — writes UTF-8-without-BOM to `%LOCALAPPDATA%\Kivun-WSL\kivun-workdir.txt` on OK, nothing on Cancel.
+- **`payload/kivun-terminal.bat`** — invokes `start /wait mshta.exe folder-picker.hta` (synchronous; launcher resumes after dialog closes). Falls back to the .wsf if the .hta is missing, so a half-installed v1.3.0 still works.
+- **`installer/Kivun_Terminal_Setup.nsi`** — ships `folder-picker.hta`; removed the v1.2.9 "Edit Kivun Terminal Config.lnk" Start Menu shortcut (now redundant — both entry points led to the same Notepad-on-config flow). Uninstaller still cleans up the v1.2.9 shortcut for users upgrading from that version.
+
+### Why HTA over native BrowseForFolder
+
+Win32 `BrowseForFolder` does not allow custom buttons via the JScript-accessible API. Adding "Edit Default Flags…" required either embedding `Shell.Application` calls into a custom dialog **or** wiring up a Win32 callback proc — the second is not reachable from JScript. HTA is the lightest option that lets us own the button layout while still calling `Shell.Application.BrowseForFolder` from inside the dialog when the user clicks Browse. `mshta.exe` ships with every Windows 11 install.
+
+### Compatibility
+
+- Right-click "Open with Kivun Terminal" path is unaffected (no picker fires when a folder argument is passed).
+- Users on `FOLDER_PICKER=false` see no picker dialog at all (existing v1.2.5 behavior).
+- The .hta uses the same set of ActiveX objects (`Shell.Application`, `Scripting.FileSystemObject`, `ADODB.Stream`, `WScript.Shell`) the .wsf used, so any antivirus heuristics that allowed the .wsf will allow the .hta. SmartScreen warnings on first run are inherited from the unsigned installer, not from this dialog.
+
+## [1.2.9] - 2026-05-05
+
+### Added: discoverable "Edit Kivun Terminal Config" Start Menu shortcut
+
+User feedback: *"how will the user find that txt, he must have a button on the browse to get there, can it be done?"* — and after I offered an HTA-replacement of the picker (Option B) versus a simple Start Menu shortcut (Option A), the user chose **Option A**.
+
+- `installer/Kivun_Terminal_Setup.nsi` — `SEC_SHORTCUT` now also creates `$SMPROGRAMS\Edit Kivun Terminal Config.lnk`, target `notepad.exe`, args quote `$INSTDIR\config.txt`. Same Kivun icon, normal-window state. Uninstaller cleans it up. New users install once and `Edit Kivun Terminal Config` appears in Start Menu next to `Kivun Terminal`.
+- The native `BrowseForFolder` dialog stays as v1.2.6's single-dialog browse-or-paste UX. Discarded a draft `payload/folder-picker.hta` that would have replaced the native picker with a custom HTA window — Option A is simpler and matches the user's "not over-engineered" constraint.
+
+### `CLAUDE_FLAGS` reference expanded to the full `claude --help` set
+
+User feedback: *"you did not look at the other project for full flag list"* — and on inspection the sibling `kivun-terminal` project's reference is itself a curated 8-flag subset of the actual `claude --help` output. v1.2.9 sources directly from `claude --help` for accuracy.
+
+- `payload/config.txt` `CLAUDE_FLAGS` block now lists ~25 flags grouped by category: session control (`--continue`, `--resume`, `--from-pr`, `--worktree`, `--tmux`), model + cost (`--model`, `--fallback-model`, `--max-budget-usd`, `--effort`), tools and permissions (`--add-dir`, `--allowedTools`, `--disallowedTools`, `--tools`, `--permission-mode`, `--dangerously-skip-permissions`), prompts (`--append-system-prompt`, `--system-prompt`), agents/plugins/MCP (`--agent`, `--plugin-dir`, `--mcp-config`), debugging (`-d/--debug`, `--verbose`), and meta (`-v/--version`, `-h/--help`).
+- A **RECOMMENDED PRESETS** subsection at the top of the comment shows four ready-to-uncomment configurations (default, always-resume, resume + Opus, always-on always-Opus). Power users can pick one without reading the full menu.
+- The previous 8-flag list (matching the sibling) was technically correct but missed `--permission-mode`, `--effort`, `--worktree`, `--from-pr`, `--max-budget-usd`, `--mcp-config`, etc. — useful flags users were unaware of.
+
+### Authoritative source
+
+The flag reference is sourced from `claude --help` against Claude Code 2.1.71 (the version installed in the test WSL Ubuntu during this session). Claude Code's CLI surface evolves; users should run `claude --help` directly for the canonical list.
+
+## [1.2.8] - 2026-05-05
+
+### `config.txt` reorganized — main settings first, advanced last
+
+User feedback: *"this is not user friendly. should be the main things to set first. all other stuff and langueses posibilites later."* and *"it is missing the tags options completly. we had in the other project a full option."*
+
+The previous config.txt mixed the things users actually edit (`CLAUDE_FLAGS`, `FOLDER_PICKER`, `RESPONSE_LANGUAGE`) with BiDi-wrapper internals, and bloated the top of the file with the full 23-language list — making the first thing a new user saw a wall of language entries rather than the settings they probably came to change.
+
+**New structure (`payload/config.txt`):**
+
+1. **QUICK SETTINGS** — `CLAUDE_FLAGS`, `FOLDER_PICKER`, `RESPONSE_LANGUAGE` (one-liner with pointer to the full list at the bottom), `PRIMARY_LANGUAGE`. Each has a 3–4 line comment, no walls of text.
+2. **DISPLAY & INSTALL** — `USE_VCXSRV`, `TEXT_DIRECTION`, `AUTO_INSTALL_CLAUDE` (the last is now a documented config key — previously only readable from the .bat's defaults).
+3. **BIDI WRAPPER** — all six `KIVUN_BIDI_*` tunables, with one-paragraph descriptions instead of the previous multi-screen explanations. Pointer to `docs/specs/BIDI_ALGORITHM.md` for users who need the full design notes.
+4. **REFERENCE: 23 supported languages** — full list with native-script labels, moved to the bottom. Out of the way for first-time setup, still easy to find when you want to switch.
+5. **Notes** — pointers to `SECURITY.txt`, `CREDENTIALS.txt`, etc.
+
+`CLAUDE_FLAGS` documentation matches the sibling `kivun-terminal` project's full flag reference (8 flags: `--continue`, `--resume`, `--model opus/sonnet/haiku`, `--print`, `--add-dir`, `--enable-auto-mode`).
+
+No code changes — the launcher's config-parser still reads the same keys; only the file's layout and prose changed.
+
+## [1.2.7] - 2026-05-05
+
+### Added: persistent default Claude flags via `config.txt`
+
+- New `CLAUDE_FLAGS=` setting in `payload/config.txt` — appended unquoted to every `claude` invocation. Empty by default. Inline documentation lists the common Claude Code flags (`--continue`, `--model opus`, `--enable-auto-mode`, etc.) so users can see the menu without leaving the file. The folder-picker dialog now points at it: *"Use the tree or paste a path. (Default Claude flags: see CLAUDE_FLAGS in config.txt)"*.
+- `payload/kivun-terminal.bat` — reads `CLAUDE_FLAGS` from `config.txt` (with the same SECURITY-quoted parser as the other settings, so a malicious config can't inject commands), passes the value as positional arg 8 to `kivun-launch.sh` and arg 3 to `kivun-direct.sh`.
+- `payload/kivun-launch.sh` — accepts `${8:-}` as `CLAUDE_FLAGS`, splices it into the heredoc'd launch script after `--append-system-prompt`. Unquoted on purpose so bash word-splits `--a --b` into two argv entries.
+- `payload/kivun-direct.sh` — accepts `${3:-}` as `EXTRA_FLAGS`, appends to the `claude` invocation in all three resolver branches (`~/.local/bin`, `/usr/local/bin`, PATH).
+
+### Picker dialog: prompt text iteration
+
+- Final prompt: *"Use the tree or paste a path. (Default Claude flags: see CLAUDE_FLAGS in config.txt)"*. Earlier strings (`"Select a folder for Kivun Terminal — browse the tree, or type / paste a path below."`, `"Path: type or paste a Windows path..."`, `"Pick a folder: browse the tree..."`, `"Use the tree or paste a path"`) iterated through this session in response to user feedback that they were too verbose, too academic, or contained an em-dash that some Windows configurations rendered as a stray glyph. The final form is short, action-led, em-dash-free, and references the config file for flag editing.
+
+### Deferred (reaffirmed)
+
+- **No per-session temp txt file for flags.** User constraint from this session: *"for flags, txt file is not acceptable"* — referring to the sibling `kivun-terminal` project's pattern of writing one-shot flags into `%LOCALAPPDATA%\Kivun\kivun-claude-flags.txt`. v1.2.7 sets static defaults via `config.txt` instead; per-launch flag overrides (an interactive prompt after the picker) are not implemented.
+- **No startup-command auto-typing.** Sibling pattern uses Windows-side WScript SendKeys to type a command into the Claude TUI after launch — that approach cannot reach a process running inside WSL Konsole, so a port would need a Linux-side keystroke injector and a synchronization handshake. Out of scope.
+
+## [1.2.6] - 2026-05-05
+
+Two desktop-shortcut bugs reported on a fresh v1.2.5 install: cancelling the folder picker dropped the user into a minimized cmd window with an invisible `set /p` prompt; and on slower machines two Claude Code windows opened (one in Konsole, one in the launcher's cmd console) because the launcher's `pgrep`-based Konsole-detection raced.
+
+### Fixed: folder picker is now a single dialog with browse + paste
+
+- `payload/folder-picker.wsf` rewritten to use `BIF_NEWDIALOGSTYLE | BIF_EDITBOX` (flag mask 0x50) — Windows' modern folder browser with a labeled text-input field at the bottom of the same dialog. Users can browse the folder tree OR type/paste a Windows path. Cancel silently falls back to `%USERPROFILE%`.
+- `payload/kivun-terminal.bat` — removed the cmd-side `:picker_textinput` text-input fallback that v1.2.5 added. That fallback was correct logic but invisible UX: the desktop shortcut launches the .bat with `SW_SHOWMINIMIZED`, so any `set /p` prompt sat in a minimized window the user could not see. All path-collection UI now lives in `folder-picker.wsf` as Win32 dialogs that pop above any minimized parent.
+
+### Fixed: only one Claude Code window opens
+
+- `payload/kivun-terminal.bat` — removed the racy post-launch `pgrep -x konsole` polling and its `:run_direct` fall-through. The polling had a 13-second timeout and on slower systems would return non-zero before Konsole actually registered, so the launcher spawned a SECOND `claude` directly in the parent cmd while Konsole eventually started with its own Claude inside it. The bash launcher (`kivun-launch.sh`) writes its own progress to `BASH_LAUNCH_LOG.txt`, so genuine Konsole failures are still diagnosable from logs. The `.bat` no longer second-guesses; it spawns `kivun-launch.sh` async and exits cleanly. The `:run_direct` label is preserved for hard failures reached via explicit `goto :run_direct` (e.g. Konsole apt-install failure during launch).
+
+### Documentation
+
+- New **"What's included out of the box"** section in the README, advertising the launcher UX (folder picker dialog with browse+paste, right-click menu, statusline, theme, BiDi wrapper, auto-install) before any technical content. Matches the user's request for parity with the sibling `kivun-terminal` README.
+
+## [1.2.5] - 2026-05-05
+
+Two desktop-shortcut bugs reported on a fresh v1.2.4 install: the launcher always opened in `%USERPROFILE%`, never the user's chosen folder; and the 2-line statusline rendered as a single line (project/model/context only, with the session/weekly usage row clipped).
+
+### Fixed: folder picker on the desktop shortcut
+
+- `payload/config.txt`: `FOLDER_PICKER` default flipped from `false` → `true`. The native Windows folder-browse dialog now pops on every desktop-shortcut launch, matching the sibling `kivun-terminal` UX. Right-click "Open with Kivun Terminal" continues to ignore this setting (the right-clicked folder is used directly).
+- `payload/kivun-terminal.bat`: the picker block was a nested `(...)` block — `set "WORK_DIR=%PICKED%"` was parse-time-expanded to `WORK_DIR=""` BEFORE `set /p PICKED=<file` ran, so the chosen folder was silently discarded and the launcher's empty-WORK_DIR guard substituted `%USERPROFILE%`. Restructured to flat goto-labelled steps so each `set` evaluates `%VAR%` at runtime. Same trap class as the v1.1.16 `wslpath ""` bug — added a comment in-file to document the fix.
+
+### Fixed: 2-line statusline rendered as 1 line
+
+- `payload/configure-statusline.js`: `padding: 1` → `lines: 2`. `padding` is horizontal-only per the [Claude Code statusline docs](https://code.claude.com/docs/en/statusline) — it does not reserve vertical rows. Empirically verified against the sibling `kivun-terminal` project, which has used `lines: 2` since v2.x and renders both rows.
+- `payload/kivun-launch.sh`: per-session settings file (passed to claude via `--settings`) stripped to `{statusLine: {type, command, lines: 2}}`. The previous content carried `outputStyle: "minimal"`, `transcriptVerbosity: "minimal"`, and four `showXxx: false` keys; one or more of those was collapsing the statusline area to a single row even with `lines: 2` set. Matching the sibling's minimal config restored 2-line rendering. Comment in-file warns against re-adding the verbosity keys without re-testing.
+
+### Why this slipped past CI
+
+The launcher CI in `.github/workflows/validate-launcher-windows.yml` exercises Konsole launch + EUID guards + path conversion, but does not assert on the rendered statusline (the test runner has no display). The folder-picker fallback was also untested — the picker pops a native Win32 dialog that headless CI cannot interact with. Both gaps remain; PRs welcome.
+
 ## [1.2.4] - 2026-05-03
 
 **macOS support is deprecated.** v1.2.0 → v1.2.3 each tried a different Mac terminal (Apple Terminal → iTerm2 → WezTerm) and each failed at mixed Hebrew + English rendering. This release removes the broken-on-arrival Mac build path. Windows and Linux are unaffected.

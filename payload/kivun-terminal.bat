@@ -66,6 +66,7 @@ set PRIMARY_LANGUAGE=hebrew
 set USE_VCXSRV=false
 set TEXT_DIRECTION=rtl
 set FOLDER_PICKER=false
+set "CLAUDE_FLAGS="
 REM v1.1.3: AUTO_INSTALL_CLAUDE controls the Claude-missing flow.
 REM   yes (default) - install automatically, no prompt
 REM   ask           - prompt [Y/N] like v1.1.1/v1.1.2
@@ -77,15 +78,24 @@ if exist "%~dp0config.txt" (
     REM would execute `calc.exe` during config load. The quoted form
     REM `set "X=%%b"` treats the contents as literal (& | ^ < > are
     REM all safe inside the quotes).
-    for /f "tokens=1,2 delims==" %%a in ('type "%~dp0config.txt" 2^>nul ^| findstr /v "^#"') do (
+    REM
+    REM v1.3.1: read the file directly via for /f "eol=#" instead of
+    REM piping through `type ... | findstr /v "^#"`. The pipe-form
+    REM treated LF-only configs (which `cp` from Linux/WSL produces)
+    REM as a single line — findstr saw it start with # and filtered
+    REM the entire file out, leaving every config key at its compiled-
+    REM in default. Reading the file directly via for /f handles both
+    REM LF and CRLF; eol=# skips comments without findstr.
+    for /f "usebackq eol=# tokens=1,2 delims==" %%a in ("%~dp0config.txt") do (
         if "%%a"=="RESPONSE_LANGUAGE"     set "RESPONSE_LANGUAGE=%%b"
         if "%%a"=="PRIMARY_LANGUAGE"      set "PRIMARY_LANGUAGE=%%b"
         if "%%a"=="USE_VCXSRV"            set "USE_VCXSRV=%%b"
         if "%%a"=="TEXT_DIRECTION"        set "TEXT_DIRECTION=%%b"
         if "%%a"=="FOLDER_PICKER"         set "FOLDER_PICKER=%%b"
         if "%%a"=="AUTO_INSTALL_CLAUDE"   set "AUTO_INSTALL_CLAUDE=%%b"
+        if "%%a"=="CLAUDE_FLAGS"          set "CLAUDE_FLAGS=%%b"
     )
-    call :LOG "SUCCESS - Config loaded: language=%RESPONSE_LANGUAGE%, keyboard=%PRIMARY_LANGUAGE%, vcxsrv=%USE_VCXSRV%, textdir=%TEXT_DIRECTION%, folderpicker=%FOLDER_PICKER%"
+    call :LOG "SUCCESS - Config loaded: language=%RESPONSE_LANGUAGE%, keyboard=%PRIMARY_LANGUAGE%, vcxsrv=%USE_VCXSRV%, textdir=%TEXT_DIRECTION%, folderpicker=%FOLDER_PICKER%, flags=%CLAUDE_FLAGS%"
 ) else (
     call :LOG "WARNING - config.txt not found, using defaults"
 )
@@ -96,27 +106,56 @@ echo VcXsrv: %USE_VCXSRV%
 REM If FOLDER_PICKER=true AND no folder was passed as arg (i.e. launched
 REM from the desktop shortcut, not from a right-click context menu), pop
 REM a native Windows folder-browse dialog.
-if /i "%FOLDER_PICKER:~0,4%"=="true" if "%~1"=="" (
-    call :LOG "INFO - FOLDER_PICKER enabled, launching native dialog"
-    if exist "%~dp0folder-picker.wsf" (
-        cscript //Nologo "%~dp0folder-picker.wsf" >nul 2>&1
-        if exist "%LOCALAPPDATA%\Kivun-WSL\kivun-workdir.txt" (
-            set /p PICKED=<"%LOCALAPPDATA%\Kivun-WSL\kivun-workdir.txt"
-            del "%LOCALAPPDATA%\Kivun-WSL\kivun-workdir.txt" >nul 2>&1
-            if defined PICKED (
-                set "WORK_DIR=%PICKED%"
-                call :LOG "SUCCESS - User picked folder: %PICKED%"
-                echo Work directory updated: %PICKED%
-            ) else (
-                call :LOG "INFO - User cancelled folder picker, using default: %WORK_DIR%"
-            )
-        ) else (
-            call :LOG "INFO - User cancelled folder picker, using default: %WORK_DIR%"
-        )
-    ) else (
-        call :LOG "WARNING - folder-picker.wsf not found in install dir, skipping picker"
+REM
+REM Flow is goto-based on purpose: cmd parses the bodies of nested `(...)`
+REM blocks once, up-front, expanding `%PICKED%` to whatever it was BEFORE
+REM `set /p PICKED=<file` ran. The earlier nested-paren version always
+REM produced WORK_DIR="" (parse-time expansion of an empty PICKED), the
+REM launcher's empty-WORK_DIR guard then substituted %USERPROFILE%, and
+REM the user's chosen folder was silently discarded. Top-level statements
+REM between labels evaluate %VAR% at runtime, so the picker result
+REM actually reaches WORK_DIR.
+if /i not "%FOLDER_PICKER:~0,4%"=="true" goto :picker_done
+if not "%~1"=="" goto :picker_done
+call :LOG "INFO - FOLDER_PICKER enabled, launching HTA dialog"
+if not exist "%~dp0folder-picker.hta" (
+    call :LOG "WARNING - folder-picker.hta not found in install dir, falling back to .wsf"
+    if not exist "%~dp0folder-picker.wsf" (
+        call :LOG "WARNING - folder-picker.wsf also not found; skipping picker"
+        goto :picker_done
     )
+    cscript //Nologo "%~dp0folder-picker.wsf" >nul 2>&1
+    goto :picker_read
 )
+REM v1.3.0: HTA picker replaces the .wsf BrowseForFolder. The HTA
+REM offers a path edit field, a Browse button (which still calls the
+REM native BrowseForFolder for the tree), AND an "Edit Default Flags"
+REM button that opens config.txt in Notepad — all in one dialog.
+REM Why HTA: native BrowseForFolder doesn't allow custom buttons.
+REM
+REM v1.3.3: invoke mshta.exe DIRECTLY (no `start /wait`). cmd waits
+REM for mshta to exit by default, and `start /wait mshta.exe ...`
+REM was unreliably synchronous in some configurations — Konsole
+REM could begin launching before the user finished with the picker
+REM dialog. Direct invocation guarantees the .bat blocks until the
+REM dialog window closes.
+mshta.exe "%~dp0folder-picker.hta"
+:picker_read
+if not exist "%LOCALAPPDATA%\Kivun-WSL\kivun-workdir.txt" (
+    call :LOG "INFO - User cancelled folder picker, using default: %WORK_DIR%"
+    goto :picker_done
+)
+set "PICKED="
+set /p PICKED=<"%LOCALAPPDATA%\Kivun-WSL\kivun-workdir.txt"
+del "%LOCALAPPDATA%\Kivun-WSL\kivun-workdir.txt" >nul 2>&1
+if not defined PICKED (
+    call :LOG "INFO - Picker file empty, using default: %WORK_DIR%"
+    goto :picker_done
+)
+set "WORK_DIR=%PICKED%"
+call :LOG "SUCCESS - User picked folder: %PICKED%"
+echo Work directory updated: %PICKED%
+:picker_done
 
 REM Set language-specific prompt. 23-entry lookup table. Default English.
 REM We strip a trailing CR (from CRLF config files) by slicing the variable
@@ -424,40 +463,31 @@ REM clutter the desktop; all its output still goes to BASH_LAUNCH_LOG.txt.
 echo.
 echo Launching Konsole...
 call :LOG "INFO - Launching Konsole via kivun-launch.sh"
-call :LOG "INFO - Command: wsl -d Ubuntu %WSL_USER_FLAG% bash %INST_WSL%kivun-launch.sh %WSL_PATH% [prompt] %PRIMARY_LANGUAGE% %USE_VCXSRV% %BASH_LOG_WSL% %TEXT_DIRECTION% %PRIMARY_MON%"
+call :LOG "INFO - Command: wsl -d Ubuntu %WSL_USER_FLAG% bash %INST_WSL%kivun-launch.sh %WSL_PATH% [prompt] %PRIMARY_LANGUAGE% %USE_VCXSRV% %BASH_LOG_WSL% %TEXT_DIRECTION% %PRIMARY_MON% [flags]"
 title Kivun Terminal v%PRODUCT_VERSION% - Loading
-start "Kivun Bash" /MIN wsl -d Ubuntu %WSL_USER_FLAG% bash "%INST_WSL%kivun-launch.sh" "%WSL_PATH%" "%CLAUDE_PROMPT%" "%PRIMARY_LANGUAGE%" "%USE_VCXSRV%" "%BASH_LOG_WSL%" "%TEXT_DIRECTION%" "%PRIMARY_MON%"
+start "Kivun Bash" /MIN wsl -d Ubuntu %WSL_USER_FLAG% bash "%INST_WSL%kivun-launch.sh" "%WSL_PATH%" "%CLAUDE_PROMPT%" "%PRIMARY_LANGUAGE%" "%USE_VCXSRV%" "%BASH_LOG_WSL%" "%TEXT_DIRECTION%" "%PRIMARY_MON%" "%CLAUDE_FLAGS%"
 if %ERRORLEVEL% EQU 0 (
     call :LOG "SUCCESS - Launch command executed"
 ) else (
     call :LOG "ERROR - Launch command failed (error %ERRORLEVEL%)"
 )
 
-REM Wait for Konsole to start (profile deploy + launch takes a few seconds)
-call :LOG "INFO - Waiting 8 seconds for Konsole to start"
-timeout /t 8 /nobreak >nul
-
-REM Check if a konsole process is running inside WSL
-call :LOG "INFO - Checking if Konsole process is running"
-wsl -d Ubuntu -- bash -c "pgrep -x konsole" 2>&1 >> "%LOG_FILE%"
-if %ERRORLEVEL% EQU 0 (
-    call :LOG "SUCCESS - Konsole is running"
-    exit
-)
-
-REM Retry check - konsole may still be starting
-call :LOG "INFO - Konsole not detected yet, waiting 5 more seconds"
-timeout /t 5 /nobreak >nul
-wsl -d Ubuntu -- bash -c "pgrep -x konsole" 2>&1 >> "%LOG_FILE%"
-if %ERRORLEVEL% EQU 0 (
-    call :LOG "SUCCESS - Konsole is running (detected on second check)"
-    exit
-)
-call :LOG "WARNING - Konsole process not detected, may not have started (WSLg issue?)"
-
-echo.
-echo Konsole did not start (WSLg may not be available on this PC).
-echo.
+REM kivun-launch.sh has been spawned async. We deliberately do NOT poll
+REM for it to confirm Konsole is up:
+REM   - pgrep had a 13-second timeout and races on slow systems. When
+REM     pgrep returned empty (Konsole still starting), the launcher
+REM     fell through to :run_direct and spawned a SECOND claude in this
+REM     cmd window. User-reported result: two Claude instances visible.
+REM   - kivun-launch.sh writes its own progress to BASH_LAUNCH_LOG.txt;
+REM     if Konsole fails to launch the user can inspect that log.
+REM   - The :run_direct label below is still kept for HARD failures
+REM     reached via explicit `goto :run_direct` earlier in this script
+REM     (e.g. Konsole apt-install failure during this very launch).
+REM
+REM Trust the bash launcher. Exit cleanly so the cmd window closes and
+REM Konsole becomes the only visible Claude window.
+call :LOG "INFO - kivun-launch.sh spawned; trusting it to handle Konsole"
+exit /b 0
 
 :run_direct
 call :LOG "INFO - Falling back to direct Claude execution in WSL terminal"
@@ -491,7 +521,7 @@ REM the Konsole-launch path but missed this one — when Konsole failed and
 REM we fell back to direct execution, we'd still spawn Claude as the wsl
 REM default user (which on root-default-user distros is root, and Claude
 REM refuses). Now both paths use the same resolved non-root user.
-wsl -d Ubuntu %WSL_USER_FLAG% bash "%INST_WSL%kivun-direct.sh" "%WSL_PATH%" "%CLAUDE_PROMPT%"
+wsl -d Ubuntu %WSL_USER_FLAG% bash "%INST_WSL%kivun-direct.sh" "%WSL_PATH%" "%CLAUDE_PROMPT%" "%CLAUDE_FLAGS%"
 call :LOG "COMPLETE - Claude session ended"
 echo.
 echo ========================================
