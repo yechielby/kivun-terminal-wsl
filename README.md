@@ -14,7 +14,7 @@
 
 <p align="center">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License"></a>
-  <img src="https://img.shields.io/badge/version-1.3.5-brightgreen" alt="v1.3.5">
+  <a href="https://github.com/noambrand/kivun-terminal-wsl/releases/latest"><img src="https://img.shields.io/github/v/release/noambrand/kivun-terminal-wsl?label=version&color=brightgreen" alt="Latest release"></a>
   <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux-lightgrey" alt="Platform">
   <img src="https://img.shields.io/badge/RTL%20languages-11-orange" alt="11 RTL Languages">
   <a href="https://github.com/noambrand/kivun-terminal-wsl/releases/latest"><img src="https://img.shields.io/github/downloads/noambrand/kivun-terminal-wsl/total?label=downloads&color=blue" alt="Total Downloads"></a>
@@ -74,15 +74,20 @@
 
 ### Windows
 
-1. **One-time WSL setup** (skip if `wsl --status` already prints WSL info): open **Terminal (Admin)**, run `wsl --install`, reboot.
-2. **[Download `Kivun_Terminal_Setup.exe`](https://github.com/noambrand/kivun-terminal-wsl/releases/latest)**
-3. Double-click to run - no admin rights needed once WSL is up.
-4. Double-click the **Kivun Terminal** desktop shortcut → pick a folder (browse the tree or paste a Windows path in the same dialog), or right-click any folder in File Explorer → **Open with Kivun Terminal** (skips the picker).
+1. **[Download `Kivun_Terminal_Setup.exe`](https://github.com/noambrand/kivun-terminal-wsl/releases/latest/download/Kivun_Terminal_Setup.exe)** from the latest release.
+2. Run it — follow the wizard. No admin rights required.
+3. Double-click the **Kivun Terminal** desktop shortcut → pick a folder (browse the tree or paste a Windows path), or right-click any folder in File Explorer → **Open with Kivun Terminal**.
 
-> **Windows 11 - Smart App Control may block the installer.** If you see *"Smart App Control blocked an app that may be unsafe"* (clicking *Ok* dismisses it without an *override* option), the installer is unsigned and SAC won't allow unknown apps at all. To install: open **Start** → search **Smart App Control** → set it to **Off**. SAC cannot be re-enabled without reinstalling Windows, so leave it Off only if you're comfortable running other unsigned apps. See [SmartScreen warning](#windows-smartscreen) below for the milder warning you'll get with SAC off.
+That's it for the happy path. The installer auto-pulls Ubuntu (WSL2) + Konsole + Claude Code on the first launch — plan ~5–15 minutes the first time, depending on your network.
 
-<a id="windows-smartscreen"></a>
-> **Windows SmartScreen warning** (different from SAC): with SAC off, you may still see *"Windows protected your PC"*. Click **More info** → **Run anyway**. The installer is unsigned today; the warning will fade once enough downloads accumulate Microsoft's reputation signal.
+<details>
+<summary>If something goes wrong: WSL not installed / SAC blocks / SmartScreen warning</summary>
+
+- **WSL2 missing.** If the wizard says *"WSL is not installed"*, open **Terminal (Admin)**, run `wsl --install`, reboot, and re-run the installer. You only do this once per machine.
+- <a id="windows-smartscreen"></a>**SmartScreen warning** (*"Windows protected your PC"*): click **More info** → **Run anyway**. The installer is unsigned; the warning fades once Microsoft's reputation signal accumulates from real downloads.
+- **Smart App Control on Windows 11** (the harder block — *"Smart App Control blocked an app that may be unsafe"* with only an *Ok* button): SAC refuses unsigned apps entirely. Open **Start** → search **Smart App Control** → set it to **Off**. SAC cannot be re-enabled without reinstalling Windows, so leave it off only if you're comfortable running other unsigned apps.
+
+</details>
 
 ### Linux
 
@@ -262,7 +267,7 @@ The surfaces (generic browser DOM, Claude.ai web UI, VS Code / IDE webview, Micr
 הוראות ההתקנה מפורטות באנגלית בקטעי **Quick Start** למעלה. הפקודות (`npm install`, נתיבים וכד') זהות בכל השפות ולא תורגמו. בקצרה:
 
 <ul dir="rtl" align="right">
-<li><strong>Windows:</strong> <code>wsl --install</code> חד-פעמי, אז להוריד את <code>Kivun_Terminal_Setup.exe</code> מ-<a href="https://github.com/noambrand/kivun-terminal-wsl/releases/latest">הגרסה האחרונה</a> ולהריץ.</li>
+<li><strong>Windows:</strong> מורידים את <a href="https://github.com/noambrand/kivun-terminal-wsl/releases/latest/download/Kivun_Terminal_Setup.exe"><code>Kivun_Terminal_Setup.exe</code></a> ומריצים את האשף. ההתקנה תורידה אוטומטית את WSL2 + Ubuntu + Konsole + Claude Code בהפעלה הראשונה (~5–15 דקות, תלוי ברשת). אם WSL2 עדיין לא מותקן, האשף יבקש לפתוח <strong>Terminal (Admin)</strong> ולהריץ <code>wsl --install</code> חד-פעמית ולאתחל - פעולה חד-פעמית למחשב.</li>
 <li><strong>Linux:</strong> <code>git clone</code> + <code>./linux/install.sh</code>. תומך ב-apt/dnf/pacman/zypper.</li>
 <li><strong>macOS:</strong> לא נתמך מ-v1.2.4 ואילך - ראו <a href="mac/README.md"><code>mac/README.md</code></a>.</li>
 </ul>
