@@ -3,6 +3,16 @@
 All notable changes to Kivun Terminal are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.3.3] - 2026-05-05
+
+### Three picker iteration fixes from continued user testing
+
+User feedback after v1.3.2: *"the logo is not added"*, *"seems like something opened before the user confirmed how to open"*, *"text can be bigger"*.
+
+- **`payload/folder-picker.hta`** — added `<link rel="shortcut icon" href="kivun_icon.ico">` and `<link rel="icon" ...>` in addition to the existing `HTA:APPLICATION ICON=`. Some Windows versions ignore the HTA icon attribute alone; the `<link>` tags pick up via mshta's HTML rendering. Combined coverage gives the title-bar/taskbar icon a better chance of rendering across mshta variants. (If the icon still doesn't show on a given Windows build, that's an mshta limitation that would need a binary wrapper to fully fix — out of scope for the launcher.)
+- **`payload/folder-picker.hta`** — font sizes bumped further: body 17px (was 15), headline 24px (was 20), path input 18px (was 16), buttons 16–17px, option labels 17px. Numbered circles enlarged to 28px. Window resized 1000×620 to fit comfortably.
+- **`payload/kivun-terminal.bat`** — picker invocation changed from `start /wait mshta.exe ...` to `mshta.exe ...` directly. cmd waits for the launched program by default; `start /wait` was unreliably synchronous in some configurations and could let the launcher proceed (WSL/Konsole launch) before the user finished with the picker dialog. Direct invocation guarantees the picker is fully closed before any subsequent step runs — no more "something opened before the user confirmed."
+
 ## [1.3.2] - 2026-05-05
 
 ### Folder picker dialog: two clearly-labeled options + bigger text

@@ -133,11 +133,13 @@ REM native BrowseForFolder for the tree), AND an "Edit Default Flags"
 REM button that opens config.txt in Notepad — all in one dialog.
 REM Why HTA: native BrowseForFolder doesn't allow custom buttons.
 REM
-REM start /wait blocks until mshta.exe exits, so the launcher resumes
-REM only after the user clicks OK / Cancel / closes the dialog. The
-REM .hta writes %LOCALAPPDATA%\Kivun-WSL\kivun-workdir.txt on OK,
-REM nothing on Cancel — same writeback contract as the old .wsf.
-start /wait mshta.exe "%~dp0folder-picker.hta"
+REM v1.3.3: invoke mshta.exe DIRECTLY (no `start /wait`). cmd waits
+REM for mshta to exit by default, and `start /wait mshta.exe ...`
+REM was unreliably synchronous in some configurations — Konsole
+REM could begin launching before the user finished with the picker
+REM dialog. Direct invocation guarantees the .bat blocks until the
+REM dialog window closes.
+mshta.exe "%~dp0folder-picker.hta"
 :picker_read
 if not exist "%LOCALAPPDATA%\Kivun-WSL\kivun-workdir.txt" (
     call :LOG "INFO - User cancelled folder picker, using default: %WORK_DIR%"

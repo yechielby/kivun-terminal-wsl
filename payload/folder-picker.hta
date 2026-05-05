@@ -21,6 +21,8 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<link rel="shortcut icon" href="kivun_icon.ico" type="image/x-icon" />
+<link rel="icon" href="kivun_icon.ico" type="image/x-icon" />
 <title>Kivun Terminal - Pick Folder</title>
 <HTA:APPLICATION
   ID="KivunPicker"
@@ -43,66 +45,66 @@
   html, body { height: 100%; }
   body {
     font-family: "Segoe UI", "Segoe UI Variable", Arial, sans-serif;
-    font-size: 15px;
+    font-size: 17px;
     margin: 0;
-    padding: 24px 32px;
+    padding: 26px 36px;
     background: #f3f3f3;
     color: #1c1c1c;
     box-sizing: border-box;
   }
   h1 {
-    font-size: 20px;
+    font-size: 24px;
     font-weight: 600;
-    margin: 0 0 10px 0;
+    margin: 0 0 12px 0;
     color: #1c1c1c;
   }
   .hint {
-    font-size: 14px;
+    font-size: 16px;
     color: #404040;
-    margin: 0 0 20px 0;
+    margin: 0 0 24px 0;
     line-height: 1.5;
   }
   .hint code, .hint kbd {
     font-family: "Consolas", "Cascadia Mono", monospace;
-    font-size: 13px;
+    font-size: 15px;
     background: #e8e8e8;
-    padding: 2px 6px;
+    padding: 2px 7px;
     border-radius: 3px;
   }
 
   .option {
     background: #fff;
     border: 1px solid #d4d4d4;
-    border-radius: 5px;
-    padding: 14px 16px;
+    border-radius: 6px;
+    padding: 18px 20px;
     margin-bottom: 4px;
   }
   .opt-label {
-    font-size: 14px;
+    font-size: 17px;
     font-weight: 600;
     color: #1c1c1c;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
   }
   .opt-num {
     display: inline-block;
-    width: 24px;
-    height: 24px;
-    line-height: 24px;
+    width: 28px;
+    height: 28px;
+    line-height: 28px;
     text-align: center;
     background: #0078d4;
     color: #fff;
     border-radius: 50%;
-    font-size: 13px;
+    font-size: 15px;
     font-weight: 700;
     flex-shrink: 0;
   }
 
   .or-sep {
     text-align: center;
-    margin: 8px 0;
+    margin: 12px 0;
     position: relative;
   }
   .or-sep:before {
@@ -117,21 +119,21 @@
   .or-sep span {
     position: relative;
     display: inline-block;
-    padding: 0 16px;
+    padding: 0 18px;
     background: #f3f3f3;
-    color: #707070;
-    font-size: 12px;
+    color: #606060;
+    font-size: 14px;
     font-weight: 700;
-    letter-spacing: 1px;
+    letter-spacing: 1.5px;
     z-index: 1;
   }
 
   input[type=text] {
     width: 100%;
     box-sizing: border-box;
-    padding: 11px 14px;
+    padding: 13px 16px;
     font-family: "Consolas", "Cascadia Mono", "Segoe UI", monospace;
-    font-size: 16px;
+    font-size: 18px;
     border: 1px solid #b8b8b8;
     background: #fff;
     border-radius: 4px;
@@ -143,9 +145,9 @@
     box-shadow: 0 0 0 1px #0078d4;
   }
   button {
-    padding: 9px 18px;
+    padding: 11px 20px;
     font-family: "Segoe UI", Arial, sans-serif;
-    font-size: 14px;
+    font-size: 16px;
     background: #fafafa;
     border: 1px solid #b8b8b8;
     cursor: pointer;
@@ -163,32 +165,32 @@
   }
   button.primary:hover { background: #1186e0; border-color: #00467a; }
   button.primary:active { background: #005a9e; }
-  button.browse { min-width: 200px; font-weight: 600; }
-  button.config { min-width: 200px; }
-  button.cancel { min-width: 100px; }
-  button.ok { min-width: 220px; font-size: 15px; }
+  button.browse { min-width: 230px; font-weight: 600; }
+  button.config { min-width: 220px; }
+  button.cancel { min-width: 110px; }
+  button.ok { min-width: 250px; font-size: 17px; }
   .actions {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: 18px;
-    padding-top: 18px;
+    margin-top: 20px;
+    padding-top: 20px;
     border-top: 1px solid #d8d8d8;
   }
   .actions .right { display: flex; gap: 10px; }
   .err {
     color: #b00020;
-    font-size: 13px;
-    min-height: 18px;
-    margin: 8px 0 0 0;
+    font-size: 15px;
+    min-height: 20px;
+    margin: 10px 0 0 0;
     font-weight: 500;
   }
 </style>
 <script language="JScript">
-  // 920x520 fits the two numbered option cards + actions row at the
-  // larger v1.3.2 font sizes (15px body, 16px input, 14px buttons).
-  // Earlier sizes: 640x240 (v1.3.0), 880x340 (v1.3.1).
-  window.resizeTo(920, 520);
+  // 1000x620 fits the larger v1.3.3 fonts (17px body, 18px input,
+  // 16px buttons, 24px headline). Earlier: 640x240 (v1.3.0),
+  // 880x340 (v1.3.1), 920x520 (v1.3.2).
+  window.resizeTo(1000, 620);
 
   var wshShell = new ActiveXObject("WScript.Shell");
   var fso = new ActiveXObject("Scripting.FileSystemObject");
