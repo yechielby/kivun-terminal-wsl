@@ -12,17 +12,42 @@
 # Default flags appended to every `claude` invocation. Mix and match
 # as you would type them on the command line — no quoting needed.
 #
-# Useful Claude Code flags:
-#   --continue              Resume your last conversation
-#   --resume my-session     Resume a named session
-#   --model opus            Use Opus (strongest reasoning)
-#   --model sonnet          Use Sonnet (faster, cheaper)
-#   --model haiku           Use Haiku (fastest, lightest)
-#   --print                 One-off answer, no interactive chat
-#   --add-dir C:\full\path  Give Claude access to an extra folder
-#   --enable-auto-mode      Skip permission prompts (auto-approve)
+# RECOMMENDED PRESETS (uncomment ONE line, or write your own combo):
+#   CLAUDE_FLAGS=                                       # default — plain interactive session
+#   CLAUDE_FLAGS=--continue                             # always resume your last conversation
+#   CLAUDE_FLAGS=--continue --model opus                # resume + force Opus
+#   CLAUDE_FLAGS=--model opus --permission-mode auto    # always-on, always-Opus
 #
-# Combine: CLAUDE_FLAGS=--continue --model opus --enable-auto-mode
+# Common Claude Code flags (full list: run `claude --help`):
+#
+#   -c, --continue                       Resume your last conversation in this dir
+#   -r, --resume [id]                    Resume a session by ID (or open picker)
+#       --model <name>                   Force model: opus | sonnet | haiku
+#       --fallback-model <name>          Auto-switch to this model when default overloaded
+#   -p, --print                          One-off answer, no interactive chat
+#       --append-system-prompt "..."     Add to the system prompt
+#       --system-prompt "..."            Replace the system prompt entirely
+#       --add-dir <dirs...>              Allow tool access to extra folders
+#       --allowedTools "Bash(git:*) Edit"   Whitelist tools
+#       --disallowedTools "..."          Blacklist tools
+#       --tools <list>                   Replace the active tool set
+#       --permission-mode <mode>         acceptEdits | bypassPermissions | default
+#                                        | dontAsk | plan | auto
+#       --dangerously-skip-permissions   Skip ALL permission prompts (sandboxes only)
+#       --effort <level>                 Effort level: low | medium | high
+#       --max-budget-usd <amount>        Hard $ cap (only with --print)
+#       --agent <name>                   Use a specific agent
+#       --plugin-dir <paths...>          Load plugins from directories
+#       --mcp-config <files...>          Load MCP servers from JSON
+#   -w, --worktree [name]                Create a new git worktree for this session
+#       --tmux                           Open inside tmux (with --worktree)
+#       --from-pr [num|url]              Resume a session linked to a PR
+#       --ide                            Auto-connect to IDE on startup
+#   -d, --debug [filter]                 Debug mode (e.g. "api,hooks")
+#       --verbose                        Verbose output
+#   -v, --version                        Print version and exit
+#   -h, --help                           Show full help (authoritative source)
+#
 # Default: empty (no extra flags — standard interactive Claude Code)
 CLAUDE_FLAGS=
 

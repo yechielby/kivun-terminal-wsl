@@ -354,6 +354,12 @@ SectionEnd
 Section "Desktop Shortcut" SEC_SHORTCUT
   CreateShortcut "$DESKTOP\Kivun Terminal.lnk" "$INSTDIR\kivun-terminal.bat" "" "$INSTDIR\kivun_icon.ico" 0 SW_SHOWMINIMIZED "" "Launch Kivun Terminal"
   CreateShortcut "$SMPROGRAMS\Kivun Terminal.lnk" "$INSTDIR\kivun-terminal.bat" "" "$INSTDIR\kivun_icon.ico" 0 SW_SHOWMINIMIZED "" "Launch Kivun Terminal"
+
+  ; v1.2.9: Start Menu shortcut to edit config.txt — gives users a
+  ; discoverable way to change CLAUDE_FLAGS / RESPONSE_LANGUAGE / etc.
+  ; without hunting through %LOCALAPPDATA%. Opens config.txt in
+  ; whatever has the .txt association (Notepad on a default install).
+  CreateShortcut "$SMPROGRAMS\Edit Kivun Terminal Config.lnk" "notepad.exe" '"$INSTDIR\config.txt"' "$INSTDIR\kivun_icon.ico" 0 SW_SHOWNORMAL "" "Edit Kivun Terminal config (CLAUDE_FLAGS, language, etc.)"
 SectionEnd
 
 Section /o "Right-Click Menu Integration" SEC_RCLICK
@@ -391,6 +397,7 @@ Section "Uninstall"
   ; Remove shortcuts
   Delete "$DESKTOP\Kivun Terminal.lnk"
   Delete "$SMPROGRAMS\Kivun Terminal.lnk"
+  Delete "$SMPROGRAMS\Edit Kivun Terminal Config.lnk"
 
   ; Remove registry entries
   DeleteRegKey HKCU "Software\Classes\Directory\shell\KivunTerminal"

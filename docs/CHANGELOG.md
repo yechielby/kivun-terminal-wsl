@@ -3,6 +3,27 @@
 All notable changes to Kivun Terminal are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.9] - 2026-05-05
+
+### Added: discoverable "Edit Kivun Terminal Config" Start Menu shortcut
+
+User feedback: *"how will the user find that txt, he must have a button on the browse to get there, can it be done?"* — and after I offered an HTA-replacement of the picker (Option B) versus a simple Start Menu shortcut (Option A), the user chose **Option A**.
+
+- `installer/Kivun_Terminal_Setup.nsi` — `SEC_SHORTCUT` now also creates `$SMPROGRAMS\Edit Kivun Terminal Config.lnk`, target `notepad.exe`, args quote `$INSTDIR\config.txt`. Same Kivun icon, normal-window state. Uninstaller cleans it up. New users install once and `Edit Kivun Terminal Config` appears in Start Menu next to `Kivun Terminal`.
+- The native `BrowseForFolder` dialog stays as v1.2.6's single-dialog browse-or-paste UX. Discarded a draft `payload/folder-picker.hta` that would have replaced the native picker with a custom HTA window — Option A is simpler and matches the user's "not over-engineered" constraint.
+
+### `CLAUDE_FLAGS` reference expanded to the full `claude --help` set
+
+User feedback: *"you did not look at the other project for full flag list"* — and on inspection the sibling `kivun-terminal` project's reference is itself a curated 8-flag subset of the actual `claude --help` output. v1.2.9 sources directly from `claude --help` for accuracy.
+
+- `payload/config.txt` `CLAUDE_FLAGS` block now lists ~25 flags grouped by category: session control (`--continue`, `--resume`, `--from-pr`, `--worktree`, `--tmux`), model + cost (`--model`, `--fallback-model`, `--max-budget-usd`, `--effort`), tools and permissions (`--add-dir`, `--allowedTools`, `--disallowedTools`, `--tools`, `--permission-mode`, `--dangerously-skip-permissions`), prompts (`--append-system-prompt`, `--system-prompt`), agents/plugins/MCP (`--agent`, `--plugin-dir`, `--mcp-config`), debugging (`-d/--debug`, `--verbose`), and meta (`-v/--version`, `-h/--help`).
+- A **RECOMMENDED PRESETS** subsection at the top of the comment shows four ready-to-uncomment configurations (default, always-resume, resume + Opus, always-on always-Opus). Power users can pick one without reading the full menu.
+- The previous 8-flag list (matching the sibling) was technically correct but missed `--permission-mode`, `--effort`, `--worktree`, `--from-pr`, `--max-budget-usd`, `--mcp-config`, etc. — useful flags users were unaware of.
+
+### Authoritative source
+
+The flag reference is sourced from `claude --help` against Claude Code 2.1.71 (the version installed in the test WSL Ubuntu during this session). Claude Code's CLI surface evolves; users should run `claude --help` directly for the canonical list.
+
 ## [1.2.8] - 2026-05-05
 
 ### `config.txt` reorganized — main settings first, advanced last
