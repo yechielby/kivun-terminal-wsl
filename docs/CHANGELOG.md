@@ -3,6 +3,25 @@
 All notable changes to Kivun Terminal are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.3.5] - 2026-05-05
+
+### Roll back to v1.3.3 picker; drop icon attempt entirely
+
+User feedback after v1.3.4: *"now it opens immediately again"* (Konsole launching with default home directory because mshta exited in 0.24s without rendering the dialog) and *"we rewinded to the html that worked, not windows folder picker and not the failing trying to add an icon. we accept not useing an icon to prevent complications."*
+
+v1.3.4's icon-fix attempt (moving `<HTA:APPLICATION>` to the first child of `<head>` and `pushd`'ing into the install dir before invoking `mshta.exe "folder-picker.hta"`) broke the picker on this user's machine — the dialog never displayed and the launcher fell straight through to the home-directory default.
+
+v1.3.5 reverts to v1.3.3's known-good state and **removes all icon plumbing entirely** per the user's preference:
+
+- **`payload/folder-picker.hta`** — restored to the v1.3.3 HTA (large two-card layout with numbered options, Browse Folder Tree, Edit Default Flags, Launch Kivun Terminal). Stripped: `HTA:APPLICATION ICON="kivun_icon.ico"`, `<link rel="shortcut icon" ...>`, `<link rel="icon" ...>`. The dialog now renders mshta's default red HTML scroll in the title bar — accepted as-is.
+- **`payload/kivun-terminal.bat`** — restored to v1.3.3's `mshta.exe "%~dp0folder-picker.hta"` direct invocation. No `pushd`/`popd` wrapping (which had introduced the cwd shift that defeated the picker's render).
+
+The Konsole window taskbar icon (set via `WM_CLASS` + `.desktop` file from `kivun-launch.sh`) is unaffected — the Konsole window keeps its proper Kivun icon. Only the picker dialog's title bar (which is open for a few seconds before Konsole launches) shows mshta's default icon.
+
+### Why this is the final word on the picker title-bar icon
+
+Across v1.3.0 → v1.3.4 we tried: `HTA:APPLICATION ICON=` alone, `<link rel="shortcut icon">`, `<link rel="icon">`, reordering `<HTA:APPLICATION>` to first-child of `<head>`, `pushd "%~dp0"` to fix relative-path resolution. The combinations that were robust enough to render reliably (v1.3.3) didn't change the icon; the combinations that *might* have fixed the icon (v1.3.4) broke the picker entirely. Modern Windows 11 mshta is hostile to title-bar icon customization without a binary wrapper, and adding a binary wrapper is out of scope for this project.
+
 ## [1.3.4] - 2026-05-05
 
 ### Picker dialog: actually try to make the title-bar icon work
