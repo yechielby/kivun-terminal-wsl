@@ -3,6 +3,28 @@
 All notable changes to Kivun Terminal are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.3.0] - 2026-05-05
+
+### Folder picker: dialog with built-in "Edit Default Flags…" button
+
+User feedback on v1.2.9: *"it opens immediately before the user picks a folder. not what he asked for."* — referring to the standalone "Edit Kivun Terminal Config" Start Menu shortcut, which opens Notepad without going through the picker. The original ask had been *"FROM THAT PICKER CAN IT REFRENCE THE TEXT FILE"* — a button **inside** the picker, not a separate launcher. v1.2.9 picked Option A (standalone shortcut) when Option B (button inside picker) was what the user actually wanted.
+
+v1.3.0 rebuilds Option B properly:
+
+- **NEW: `payload/folder-picker.hta`** — replaces the old `folder-picker.wsf` BrowseForFolder dialog. Custom HTA window with: a path text input, a **Browse…** button (still calls native `BrowseForFolder` for the folder tree), an **Edit Default Flags…** button (opens `config.txt` in Notepad asynchronously, picker stays open), **OK** with path-existence validation, **Cancel**. Same writeback contract as the .wsf — writes UTF-8-without-BOM to `%LOCALAPPDATA%\Kivun-WSL\kivun-workdir.txt` on OK, nothing on Cancel.
+- **`payload/kivun-terminal.bat`** — invokes `start /wait mshta.exe folder-picker.hta` (synchronous; launcher resumes after dialog closes). Falls back to the .wsf if the .hta is missing, so a half-installed v1.3.0 still works.
+- **`installer/Kivun_Terminal_Setup.nsi`** — ships `folder-picker.hta`; removed the v1.2.9 "Edit Kivun Terminal Config.lnk" Start Menu shortcut (now redundant — both entry points led to the same Notepad-on-config flow). Uninstaller still cleans up the v1.2.9 shortcut for users upgrading from that version.
+
+### Why HTA over native BrowseForFolder
+
+Win32 `BrowseForFolder` does not allow custom buttons via the JScript-accessible API. Adding "Edit Default Flags…" required either embedding `Shell.Application` calls into a custom dialog **or** wiring up a Win32 callback proc — the second is not reachable from JScript. HTA is the lightest option that lets us own the button layout while still calling `Shell.Application.BrowseForFolder` from inside the dialog when the user clicks Browse. `mshta.exe` ships with every Windows 11 install.
+
+### Compatibility
+
+- Right-click "Open with Kivun Terminal" path is unaffected (no picker fires when a folder argument is passed).
+- Users on `FOLDER_PICKER=false` see no picker dialog at all (existing v1.2.5 behavior).
+- The .hta uses the same set of ActiveX objects (`Shell.Application`, `Scripting.FileSystemObject`, `ADODB.Stream`, `WScript.Shell`) the .wsf used, so any antivirus heuristics that allowed the .wsf will allow the .hta. SmartScreen warnings on first run are inherited from the unsigned installer, not from this dialog.
+
 ## [1.2.9] - 2026-05-05
 
 ### Added: discoverable "Edit Kivun Terminal Config" Start Menu shortcut

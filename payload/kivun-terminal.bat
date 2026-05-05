@@ -109,18 +109,28 @@ REM between labels evaluate %VAR% at runtime, so the picker result
 REM actually reaches WORK_DIR.
 if /i not "%FOLDER_PICKER:~0,4%"=="true" goto :picker_done
 if not "%~1"=="" goto :picker_done
-call :LOG "INFO - FOLDER_PICKER enabled, launching native dialog"
-if not exist "%~dp0folder-picker.wsf" (
-    call :LOG "WARNING - folder-picker.wsf not found in install dir, skipping picker"
-    goto :picker_done
+call :LOG "INFO - FOLDER_PICKER enabled, launching HTA dialog"
+if not exist "%~dp0folder-picker.hta" (
+    call :LOG "WARNING - folder-picker.hta not found in install dir, falling back to .wsf"
+    if not exist "%~dp0folder-picker.wsf" (
+        call :LOG "WARNING - folder-picker.wsf also not found; skipping picker"
+        goto :picker_done
+    )
+    cscript //Nologo "%~dp0folder-picker.wsf" >nul 2>&1
+    goto :picker_read
 )
-REM folder-picker.wsf handles BOTH the BrowseForFolder dialog AND the
-REM cancel-fallback InputBox prompt itself, in dialog UI. We deliberately
-REM do NOT prompt from the .bat: the desktop shortcut launches us with
-REM SW_SHOWMINIMIZED, so any `set /p` prompt would sit in a minimized
-REM cmd window the user cannot see. The .wsf renders all UI as
-REM top-level dialogs that pop above any minimized parent.
-cscript //Nologo "%~dp0folder-picker.wsf" >nul 2>&1
+REM v1.3.0: HTA picker replaces the .wsf BrowseForFolder. The HTA
+REM offers a path edit field, a Browse button (which still calls the
+REM native BrowseForFolder for the tree), AND an "Edit Default Flags"
+REM button that opens config.txt in Notepad — all in one dialog.
+REM Why HTA: native BrowseForFolder doesn't allow custom buttons.
+REM
+REM start /wait blocks until mshta.exe exits, so the launcher resumes
+REM only after the user clicks OK / Cancel / closes the dialog. The
+REM .hta writes %LOCALAPPDATA%\Kivun-WSL\kivun-workdir.txt on OK,
+REM nothing on Cancel — same writeback contract as the old .wsf.
+start /wait mshta.exe "%~dp0folder-picker.hta"
+:picker_read
 if not exist "%LOCALAPPDATA%\Kivun-WSL\kivun-workdir.txt" (
     call :LOG "INFO - User cancelled folder picker, using default: %WORK_DIR%"
     goto :picker_done

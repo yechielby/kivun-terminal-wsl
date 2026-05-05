@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<!--
+  Kivun Terminal - Folder Picker (HTA dialog with Edit Default Flags button)
+
+  Replaces folder-picker.wsf in v1.3.0+. Same writeback contract:
+  on OK with a valid folder, writes the path to
+  %LOCALAPPDATA%\Kivun-WSL\kivun-workdir.txt as UTF-8 without BOM,
+  then exits. On Cancel, exits without writing — the launcher's .bat
+  treats a missing file as cancellation and falls back to %USERPROFILE%.
+
+  Why HTA: native BrowseForFolder doesn't allow custom buttons. To put
+  an "Edit Default Flags" button next to Browse + OK + Cancel, we need
+  our own dialog window. HTA gives full HTML/CSS/JS control with the
+  same Shell.Application/Scripting.FileSystemObject/ADODB.Stream
+  ActiveX objects we used in the .wsf. mshta.exe ships with every
+  Windows 11 install.
+
+  Run with: mshta.exe folder-picker.hta
+  (use `start /wait mshta.exe ...` from a .bat to block on close)
+-->
+<html>
+<head>
+<title>Kivun Terminal — Pick Folder</title>
+<HTA:APPLICATION
+  ID="KivunPicker"
+  APPLICATIONNAME="Kivun Terminal Folder Picker"
+  BORDER="dialog"
+  CAPTION="yes"
+  CONTEXTMENU="no"
+  INNERBORDER="no"
+  MAXIMIZEBUTTON="no"
+  MINIMIZEBUTTON="no"
+  SCROLL="no"
+  SELECTION="no"
+  SHOWINTASKBAR="yes"
+  SINGLEINSTANCE="yes"
+  SYSMENU="yes"
+  WINDOWSTATE="normal"
+/>
+<style>
+  body {
+    font-family: "Segoe UI", Arial, sans-serif;
+    font-size: 13px;
+    margin: 0;
+    padding: 14px 16px;
+    background: #f3f3f3;
+    color: #1c1c1c;
+  }
+  h1 {
+    font-size: 14px;
+    font-weight: 600;
+    margin: 0 0 10px 0;
+  }
+  .hint {
+    font-size: 12px;
+    color: #5a5a5a;
+    margin: 0 0 8px 0;
+  }
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+  input[type=text] {
+    flex: 1;
+    padding: 5px 7px;
+    font-family: "Segoe UI", Arial, sans-serif;
+    font-size: 13px;
+    border: 1px solid #b8b8b8;
+    background: #fff;
+  }
+  button {
+    padding: 5px 14px;
+    font-family: "Segoe UI", Arial, sans-serif;
+    font-size: 13px;
+    background: #fafafa;
+    border: 1px solid #b8b8b8;
+    cursor: pointer;
+    min-width: 88px;
+  }
+  button:hover { background: #eaeaea; }
+  button.primary { background: #0078d4; color: #fff; border-color: #005a9e; }
+  button.primary:hover { background: #1186e0; }
+  .actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 6px;
+  }
+  .actions .right { display: flex; gap: 6px; }
+  .err { color: #b00; font-size: 12px; min-height: 14px; margin: 4px 0 0 0; }
+</style>
+<script language="JScript">
+  // Sized for a 6-row dialog at 96 DPI.
+  window.resizeTo(640, 240);
+
+  var wshShell = new ActiveXObject("WScript.Shell");
+  var fso = new ActiveXObject("Scripting.FileSystemObject");
+  var shell = new ActiveXObject("Shell.Application");
+
+  // Resolve install dir from the URL of this HTA so we can find
+  // sibling files (config.txt) without an absolute path.
+  function getInstallDir() {
+    var url = decodeURIComponent(location.pathname).replace(/^\//, "").replace(/\//g, "\\");
+    return fso.GetParentFolderName(url);
+  }
+
+  var installDir = getInstallDir();
+  var kivunDir = wshShell.ExpandEnvironmentStrings("%LOCALAPPDATA%") + "\\Kivun-WSL";
+  var resultFile = kivunDir + "\\kivun-workdir.txt";
+  var configFile = installDir + "\\config.txt";
+
+  if (!fso.FolderExists(kivunDir)) {
+    fso.CreateFolder(kivunDir);
+  }
+
+  // Same UTF-8-without-BOM write as folder-picker.wsf for compat with
+  // the launcher's `set /p PICKED=<file` reader.
+  function writePath(p) {
+    var stream = new ActiveXObject("ADODB.Stream");
+    stream.Type = 2;
+    stream.Charset = "utf-8";
+    stream.Open();
+    stream.WriteText(p);
+    stream.Position = 0;
+    stream.Type = 1;
+    stream.Position = 3;
+    var outStream = new ActiveXObject("ADODB.Stream");
+    outStream.Type = 1;
+    outStream.Open();
+    stream.CopyTo(outStream);
+    outStream.SaveToFile(resultFile, 2);
+    outStream.Close();
+    stream.Close();
+  }
+
+  function clearError() {
+    document.getElementById("err").innerText = "";
+  }
+
+  function showError(msg) {
+    document.getElementById("err").innerText = msg;
+  }
+
+  function browseFolder() {
+    clearError();
+    var startPath = wshShell.ExpandEnvironmentStrings("%USERPROFILE%");
+    // BIF_NEWDIALOGSTYLE | BIF_EDITBOX = 0x50. Modern dialog with its
+    // own embedded edit field — even from within the HTA's Browse
+    // button users still have both modes available.
+    var folder = shell.BrowseForFolder(0, "Pick a folder", 0x50, startPath);
+    if (folder != null) {
+      document.getElementById("path").value = folder.Self.Path;
+    }
+  }
+
+  function editConfig() {
+    clearError();
+    if (!fso.FileExists(configFile)) {
+      showError("config.txt not found at " + configFile);
+      return;
+    }
+    // Open Notepad async — user edits at their own pace, picker stays
+    // open. Notepad-3rd-party (Notepad++/VS Code) take over via the
+    // user's .txt file association if they've changed it.
+    wshShell.Run("notepad.exe \"" + configFile + "\"", 1, false);
+  }
+
+  function ok() {
+    clearError();
+    var p = document.getElementById("path").value;
+    if (p == null) p = "";
+    p = p.replace(/^\s+|\s+$/g, "");      // trim
+    p = p.replace(/^"+|"+$/g, "");        // strip surrounding quotes
+    if (p == "") {
+      showError("Enter a folder path or click Browse.");
+      return;
+    }
+    if (!fso.FolderExists(p)) {
+      showError("Folder does not exist: " + p);
+      return;
+    }
+    writePath(p);
+    window.close();
+  }
+
+  function cancel() {
+    // No file written -> launcher treats this as cancellation and falls
+    // back to %USERPROFILE%.
+    window.close();
+  }
+
+  // Pressing Enter in the text field triggers OK; Esc triggers Cancel.
+  function onKey(ev) {
+    var k = ev.keyCode;
+    if (k == 13) { ok(); return false; }
+    if (k == 27) { cancel(); return false; }
+    return true;
+  }
+
+  function init() {
+    document.getElementById("path").focus();
+  }
+</script>
+</head>
+<body onload="init()">
+  <h1>Pick a folder for Kivun Terminal</h1>
+  <p class="hint">Type or paste a Windows path, or click <b>Browse…</b> to use the folder tree. Default Claude flags live in <code>config.txt</code> — click <b>Edit Default Flags…</b> to change them.</p>
+  <div class="row">
+    <input type="text" id="path" onkeydown="return onKey(event)" placeholder="C:\Users\you\Documents\MyProject" />
+    <button onclick="browseFolder()">Browse…</button>
+  </div>
+  <div class="actions">
+    <button onclick="editConfig()">Edit Default Flags…</button>
+    <div class="right">
+      <button onclick="cancel()">Cancel</button>
+      <button class="primary" onclick="ok()">OK</button>
+    </div>
+  </div>
+  <p class="err" id="err"></p>
+</body>
+</html>
