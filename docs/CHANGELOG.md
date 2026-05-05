@@ -3,6 +3,24 @@
 All notable changes to Kivun Terminal are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.2.5] - 2026-05-05
+
+Two desktop-shortcut bugs reported on a fresh v1.2.4 install: the launcher always opened in `%USERPROFILE%`, never the user's chosen folder; and the 2-line statusline rendered as a single line (project/model/context only, with the session/weekly usage row clipped).
+
+### Fixed: folder picker on the desktop shortcut
+
+- `payload/config.txt`: `FOLDER_PICKER` default flipped from `false` → `true`. The native Windows folder-browse dialog now pops on every desktop-shortcut launch, matching the sibling `kivun-terminal` UX. Right-click "Open with Kivun Terminal" continues to ignore this setting (the right-clicked folder is used directly).
+- `payload/kivun-terminal.bat`: the picker block was a nested `(...)` block — `set "WORK_DIR=%PICKED%"` was parse-time-expanded to `WORK_DIR=""` BEFORE `set /p PICKED=<file` ran, so the chosen folder was silently discarded and the launcher's empty-WORK_DIR guard substituted `%USERPROFILE%`. Restructured to flat goto-labelled steps so each `set` evaluates `%VAR%` at runtime. Same trap class as the v1.1.16 `wslpath ""` bug — added a comment in-file to document the fix.
+
+### Fixed: 2-line statusline rendered as 1 line
+
+- `payload/configure-statusline.js`: `padding: 1` → `lines: 2`. `padding` is horizontal-only per the [Claude Code statusline docs](https://code.claude.com/docs/en/statusline) — it does not reserve vertical rows. Empirically verified against the sibling `kivun-terminal` project, which has used `lines: 2` since v2.x and renders both rows.
+- `payload/kivun-launch.sh`: per-session settings file (passed to claude via `--settings`) stripped to `{statusLine: {type, command, lines: 2}}`. The previous content carried `outputStyle: "minimal"`, `transcriptVerbosity: "minimal"`, and four `showXxx: false` keys; one or more of those was collapsing the statusline area to a single row even with `lines: 2` set. Matching the sibling's minimal config restored 2-line rendering. Comment in-file warns against re-adding the verbosity keys without re-testing.
+
+### Why this slipped past CI
+
+The launcher CI in `.github/workflows/validate-launcher-windows.yml` exercises Konsole launch + EUID guards + path conversion, but does not assert on the rendered statusline (the test runner has no display). The folder-picker fallback was also untested — the picker pops a native Win32 dialog that headless CI cannot interact with. Both gaps remain; PRs welcome.
+
 ## [1.2.4] - 2026-05-03
 
 **macOS support is deprecated.** v1.2.0 → v1.2.3 each tried a different Mac terminal (Apple Terminal → iTerm2 → WezTerm) and each failed at mixed Hebrew + English rendering. This release removes the broken-on-arrival Mac build path. Windows and Linux are unaffected.

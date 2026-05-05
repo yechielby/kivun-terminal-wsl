@@ -96,27 +96,38 @@ echo VcXsrv: %USE_VCXSRV%
 REM If FOLDER_PICKER=true AND no folder was passed as arg (i.e. launched
 REM from the desktop shortcut, not from a right-click context menu), pop
 REM a native Windows folder-browse dialog.
-if /i "%FOLDER_PICKER:~0,4%"=="true" if "%~1"=="" (
-    call :LOG "INFO - FOLDER_PICKER enabled, launching native dialog"
-    if exist "%~dp0folder-picker.wsf" (
-        cscript //Nologo "%~dp0folder-picker.wsf" >nul 2>&1
-        if exist "%LOCALAPPDATA%\Kivun-WSL\kivun-workdir.txt" (
-            set /p PICKED=<"%LOCALAPPDATA%\Kivun-WSL\kivun-workdir.txt"
-            del "%LOCALAPPDATA%\Kivun-WSL\kivun-workdir.txt" >nul 2>&1
-            if defined PICKED (
-                set "WORK_DIR=%PICKED%"
-                call :LOG "SUCCESS - User picked folder: %PICKED%"
-                echo Work directory updated: %PICKED%
-            ) else (
-                call :LOG "INFO - User cancelled folder picker, using default: %WORK_DIR%"
-            )
-        ) else (
-            call :LOG "INFO - User cancelled folder picker, using default: %WORK_DIR%"
-        )
-    ) else (
-        call :LOG "WARNING - folder-picker.wsf not found in install dir, skipping picker"
-    )
+REM
+REM Flow is goto-based on purpose: cmd parses the bodies of nested `(...)`
+REM blocks once, up-front, expanding `%PICKED%` to whatever it was BEFORE
+REM `set /p PICKED=<file` ran. The earlier nested-paren version always
+REM produced WORK_DIR="" (parse-time expansion of an empty PICKED), the
+REM launcher's empty-WORK_DIR guard then substituted %USERPROFILE%, and
+REM the user's chosen folder was silently discarded. Top-level statements
+REM between labels evaluate %VAR% at runtime, so the picker result
+REM actually reaches WORK_DIR.
+if /i not "%FOLDER_PICKER:~0,4%"=="true" goto :picker_done
+if not "%~1"=="" goto :picker_done
+call :LOG "INFO - FOLDER_PICKER enabled, launching native dialog"
+if not exist "%~dp0folder-picker.wsf" (
+    call :LOG "WARNING - folder-picker.wsf not found in install dir, skipping picker"
+    goto :picker_done
 )
+cscript //Nologo "%~dp0folder-picker.wsf" >nul 2>&1
+if not exist "%LOCALAPPDATA%\Kivun-WSL\kivun-workdir.txt" (
+    call :LOG "INFO - User cancelled folder picker, using default: %WORK_DIR%"
+    goto :picker_done
+)
+set "PICKED="
+set /p PICKED=<"%LOCALAPPDATA%\Kivun-WSL\kivun-workdir.txt"
+del "%LOCALAPPDATA%\Kivun-WSL\kivun-workdir.txt" >nul 2>&1
+if not defined PICKED (
+    call :LOG "INFO - User cancelled folder picker, using default: %WORK_DIR%"
+    goto :picker_done
+)
+set "WORK_DIR=%PICKED%"
+call :LOG "SUCCESS - User picked folder: %PICKED%"
+echo Work directory updated: %PICKED%
+:picker_done
 
 REM Set language-specific prompt. 23-entry lookup table. Default English.
 REM We strip a trailing CR (from CRLF config files) by slicing the variable

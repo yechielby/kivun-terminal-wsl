@@ -184,18 +184,34 @@ if [ -f "$SCRIPT_DIR/statusline.mjs" ] && [ -f "$SCRIPT_DIR/configure-statusline
     # tmp launch script passes this to claude via --settings. The
     # outputStyle/verbosity knobs suppress tool-call spam and compact the
     # transcript — matching the config the user runs on Windows Terminal.
+    # lines=2 reserves a SECOND line of vertical space for the
+    # statusline. statusline.mjs writes two lines (project/model/context
+    # on top, session/weekly usage bars on bottom); without lines>=2,
+    # Claude Code 2.1.x clips to one line and silently drops the second
+    # process.stdout.write. NOTE: padding is horizontal-only — using it
+    # here as a vertical-reserve was a false lead.
+    #
+    # The user-level configure-statusline.js sets this in
+    # ~/.claude/settings.json, but --settings overrides that file — so
+    # this per-session settings.json must set lines itself.
+    #
+    # We DELIBERATELY do not include outputStyle/transcriptVerbosity/
+    # showToolCalls/showCommandOutput/showCommand/showCode here. The
+    # sibling kivun-terminal (Windows Terminal) project — which renders
+    # the 2-line statusline correctly — has only `statusLine` in its
+    # settings.json. When this file also had the verbosity keys, the
+    # second statusline row failed to render in WSL/Konsole, even with
+    # lines:2 set. Matching the sibling's minimal config restored
+    # 2-line rendering. Adding any of those keys back risks the same
+    # collapse — re-test with this exact minimal payload before adding
+    # any verbosity tuning.
     cat > "$KT_HOME/settings.json" <<EOF
 {
   "statusLine": {
     "type": "command",
-    "command": "node \\"$KT_HOME/statusline.mjs\\""
-  },
-  "outputStyle": "minimal",
-  "transcriptVerbosity": "minimal",
-  "showToolCalls": false,
-  "showCommandOutput": false,
-  "showCommand": false,
-  "showCode": false
+    "command": "node \\"$KT_HOME/statusline.mjs\\"",
+    "lines": 2
+  }
 }
 EOF
     log "SUCCESS - Wrote WSL-only settings: $KT_HOME/settings.json"

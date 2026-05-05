@@ -76,8 +76,8 @@ USE_VCXSRV=true
 # Right-click "Open with Kivun Terminal" on a folder always uses that
 # folder directly — this setting is ignored in that path.
 #
-# Default: false
-FOLDER_PICKER=false
+# Default: true
+FOLDER_PICKER=true
 
 # =================================================================
 # TEXT DIRECTION (RTL INPUT)
