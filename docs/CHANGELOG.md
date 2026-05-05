@@ -3,6 +3,19 @@
 All notable changes to Kivun Terminal are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.3.4] - 2026-05-05
+
+### Picker dialog: actually try to make the title-bar icon work
+
+User feedback: *"looks good, just the logo was not added."*
+
+Two known mshta quirks combined to defeat the v1.3.3 icon attempt:
+
+1. **`<HTA:APPLICATION>` order**: mshta is sensitive to where the `<HTA:APPLICATION>` element sits in `<head>`. v1.3.3 had it after `<meta>`, `<link>`, and `<title>` — by which point mshta has often already chosen its window icon. Moved to the very first child of `<head>` in v1.3.4.
+2. **Working directory for relative `ICON=`**: `mshta.exe "C:\full\path\folder-picker.hta"` runs with the .bat's cwd, not the .hta's directory. The relative `ICON="kivun_icon.ico"` resolves against cwd; on a fresh launch from the desktop shortcut, cwd is `%SystemRoot%\System32` where there is no `kivun_icon.ico`, so the icon path fails and mshta falls back to its default red HTML scroll. v1.3.4 wraps the launch in `pushd "%~dp0"` / `popd` so cwd matches the install dir before mshta starts.
+
+If the icon still doesn't show after both of these, that's a deep mshta limitation that would need a binary wrapper (a tiny EXE compiled with the icon as a resource) — but that's a different scope of project than a launcher dialog. The Konsole window's taskbar icon (set via `WM_CLASS` + `.desktop` file) is unaffected and continues to work.
+
 ## [1.3.3] - 2026-05-05
 
 ### Three picker iteration fixes from continued user testing

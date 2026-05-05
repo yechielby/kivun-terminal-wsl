@@ -139,7 +139,15 @@ REM was unreliably synchronous in some configurations — Konsole
 REM could begin launching before the user finished with the picker
 REM dialog. Direct invocation guarantees the .bat blocks until the
 REM dialog window closes.
-mshta.exe "%~dp0folder-picker.hta"
+REM
+REM v1.3.4: pushd into the install dir before invoking mshta, so the
+REM HTA's working directory matches the install dir. mshta resolves
+REM relative paths in `<HTA:APPLICATION ICON="kivun_icon.ico">` via
+REM cwd; without this, the icon path could fail to resolve and the
+REM dialog would fall back to mshta's default red HTML scroll icon.
+pushd "%~dp0"
+mshta.exe "folder-picker.hta"
+popd
 :picker_read
 if not exist "%LOCALAPPDATA%\Kivun-WSL\kivun-workdir.txt" (
     call :LOG "INFO - User cancelled folder picker, using default: %WORK_DIR%"
