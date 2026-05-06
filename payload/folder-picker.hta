@@ -706,7 +706,6 @@
   function bindChips() {
     var chips = [
       ["chip-hebrew",      '--append-system-prompt "respond in Hebrew"'],
-      ["chip-effort-low",  '--effort low'],
       ["chip-effort-high", '--effort high'],
       ["chip-concise",     '--append-system-prompt "be concise; keep responses short"'],
       ["chip-stepbystep",  '--append-system-prompt "explain your reasoning step by step"'],
@@ -1069,7 +1068,6 @@
       <div class="lbl">Quick options:</div>
       <div class="chip-row">
         <button type="button" class="chip" id="chip-hebrew"      title="Asks Claude to reply in Hebrew">+ Respond in Hebrew</button>
-        <button type="button" class="chip" id="chip-effort-low"  title="--effort low — Claude answers quickly with less deliberation; fastest and cheapest">+ Low effort</button>
         <button type="button" class="chip" id="chip-effort-high" title="--effort high — Claude thinks harder before answering; slower and more thorough">+ High effort</button>
         <button type="button" class="chip" id="chip-concise"     title="Tells Claude to keep replies short and to the point">+ Concise responses</button>
         <button type="button" class="chip" id="chip-stepbystep"  title="Tells Claude to explain its reasoning step by step before any conclusion">+ Step-by-step reasoning</button>

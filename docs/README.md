@@ -1,4 +1,4 @@
-# Kivun Terminal v1.4.1
+# Kivun Terminal v1.4.2
 
 [![Latest release](https://img.shields.io/github/v/release/noambrand/kivun-terminal-wsl?label=version&color=brightgreen)](https://github.com/noambrand/kivun-terminal-wsl/releases/latest)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-lightgrey)]()
@@ -72,7 +72,7 @@ See [README_INSTALLATION.md](README_INSTALLATION.md) for full options and [TROUB
 
 ### How it's different from the LTR sister project
 
-| | Launchpad CLI v2.4.2 | Kivun Terminal v1.4.1 |
+| | Launchpad CLI v2.4.2 | Kivun Terminal v1.4.2 |
 |---|---|---|
 | **Runtime** | Windows Terminal (native) | WSL2 + Ubuntu + Konsole |
 | **RTL/BiDi rendering** | LTR only | Full RTL + line-start RLM fix for Claude's bullet-line direction bug ([anthropics/claude-code#39881](https://github.com/anthropics/claude-code/issues/39881)) |
@@ -84,7 +84,7 @@ See [README_INSTALLATION.md](README_INSTALLATION.md) for full options and [TROUB
 
 > Looking for the LTR-only sister project? See [ClaudeCode Launchpad CLI](https://github.com/noambrand/kivun-terminal) - faster startup, no WSL needed.
 
-### What's new in v1.4.1
+### What's new in v1.4.2
 
 - **HTA folder picker dialog (v1.3.0+).** The desktop shortcut now opens a single dialog with two clearly numbered options — type/paste a Windows path or browse the folder tree — plus an **Edit Default Flags** button that opens `config.txt`. Replaces the v1.2.5–v1.2.6 native `BrowseForFolder` dialog because users couldn't find where to type a path. Cancel still falls back silently to `%USERPROFILE%`.
 - **`CLAUDE_FLAGS=` in `config.txt` (v1.2.7+).** Set default Claude flags applied to every launch (e.g. `CLAUDE_FLAGS=--model opus --continue`). The reference list at the bottom of `config.txt` enumerates ~25 supported flags from `claude --help`. No temp files involved — flags are passed straight from `kivun-terminal.bat` → `kivun-launch.sh` → the `claude` invocation.
