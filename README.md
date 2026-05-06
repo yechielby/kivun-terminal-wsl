@@ -318,28 +318,6 @@ The surfaces (generic browser DOM, Claude.ai web UI, VS Code / IDE webview, Micr
 
 לפירוט מלא של האלגוריתם, ראו [`docs/specs/BIDI_ALGORITHM.md`](docs/specs/BIDI_ALGORITHM.md). למעקב אחרי הבאג ב-upstream של Anthropic, ראו [anthropics/claude-code#39881](https://github.com/anthropics/claude-code/issues/39881). אם אתם רוצים לתרום תיעוד עברי לריפו הזה, יש מדריך מעשי ב-[`docs/HEBREW_RTL_GITHUB.md`](docs/HEBREW_RTL_GITHUB.md) על איך לכתוב עברית שתעבוד נכון ב-GitHub.
 
-### 🏗️ ארכיטקטורה
-
-```mermaid
-graph TD
-    A[Installer .exe / install.sh] --> B{Dependency Check}
-    B -->|Missing| C[Install Konsole + Node.js + Git]
-    B -->|Present| D[Skip]
-    C --> E[Install Claude Code via curl claude.ai/install.sh]
-    D --> E
-    E --> F[Deploy kivun-claude-bidi wrapper + npm install]
-    F --> G[Register Konsole profile + color scheme]
-    G --> H[Create Desktop Shortcut + Right-Click Integration]
-
-    subgraph Runtime
-        I[Launcher] --> J[Read config: KIVUN_BIDI_WRAPPER, RESPONSE_LANGUAGE, ...]
-        J --> K{Wrapper enabled?}
-        K -->|Yes| L[Spawn kivun-claude-bidi → claude]
-        K -->|No| M[Spawn claude directly]
-        L --> N[Konsole]
-        M --> N
-    end
-```
 
 ### 🧰 ערכת הכלים
 
