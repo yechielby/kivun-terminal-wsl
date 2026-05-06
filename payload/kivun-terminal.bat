@@ -157,6 +157,28 @@ call :LOG "SUCCESS - User picked folder: %PICKED%"
 echo Work directory updated: %PICKED%
 :picker_done
 
+REM Re-read CLAUDE_FLAGS from config.txt — the HTA picker may have just
+REM rewritten the line based on the user's flag-picker selections, and
+REM the version we loaded at startup is now stale. Only this single key
+REM needs refreshing; language/theme/bidi keys aren't editable from the
+REM picker, so the rest of the config-loaded variables are still good.
+if exist "%~dp0config.txt" (
+    for /f "usebackq eol=# tokens=1,2 delims==" %%a in ("%~dp0config.txt") do (
+        if "%%a"=="CLAUDE_FLAGS" set "CLAUDE_FLAGS=%%b"
+    )
+    call :LOG "INFO - CLAUDE_FLAGS after picker: %CLAUDE_FLAGS%"
+)
+
+REM v1.4.0: pick up startup slash commands the HTA picker may have
+REM written (one command per line). kivun-launch.sh reads the file
+REM content itself and types each line into Konsole after Claude is up.
+REM Convert the Windows path to a WSL path so bash can read it directly.
+set "STARTUP_CMDS_WSL="
+if exist "%LOCALAPPDATA%\Kivun-WSL\kivun-startup-cmds.txt" (
+    for /f "delims=" %%i in ('wsl wslpath "%LOCALAPPDATA%\Kivun-WSL\kivun-startup-cmds.txt" 2^>nul') do set "STARTUP_CMDS_WSL=%%i"
+    call :LOG "INFO - Startup commands file: %STARTUP_CMDS_WSL%"
+)
+
 REM Set language-specific prompt. 23-entry lookup table. Default English.
 REM We strip a trailing CR (from CRLF config files) by slicing the variable
 REM to a fixed length per language key before comparing.
@@ -465,7 +487,7 @@ echo Launching Konsole...
 call :LOG "INFO - Launching Konsole via kivun-launch.sh"
 call :LOG "INFO - Command: wsl -d Ubuntu %WSL_USER_FLAG% bash %INST_WSL%kivun-launch.sh %WSL_PATH% [prompt] %PRIMARY_LANGUAGE% %USE_VCXSRV% %BASH_LOG_WSL% %TEXT_DIRECTION% %PRIMARY_MON% [flags]"
 title Kivun Terminal v%PRODUCT_VERSION% - Loading
-start "Kivun Bash" /MIN wsl -d Ubuntu %WSL_USER_FLAG% bash "%INST_WSL%kivun-launch.sh" "%WSL_PATH%" "%CLAUDE_PROMPT%" "%PRIMARY_LANGUAGE%" "%USE_VCXSRV%" "%BASH_LOG_WSL%" "%TEXT_DIRECTION%" "%PRIMARY_MON%" "%CLAUDE_FLAGS%"
+start "Kivun Bash" /MIN wsl -d Ubuntu %WSL_USER_FLAG% bash "%INST_WSL%kivun-launch.sh" "%WSL_PATH%" "%CLAUDE_PROMPT%" "%PRIMARY_LANGUAGE%" "%USE_VCXSRV%" "%BASH_LOG_WSL%" "%TEXT_DIRECTION%" "%PRIMARY_MON%" "%CLAUDE_FLAGS%" "%STARTUP_CMDS_WSL%"
 if %ERRORLEVEL% EQU 0 (
     call :LOG "SUCCESS - Launch command executed"
 ) else (
