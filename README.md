@@ -51,15 +51,18 @@
 
 |  | Launchpad CLI | Kivun Terminal |
 |---|---|---|
-| **RTL/BiDi rendering** | LTR only (Windows Terminal has no BiDi engine) | ✅ Full RTL + line-start RLM fix for Claude's bullet-line direction bug ([anthropics/claude-code#39881](https://github.com/anthropics/claude-code/issues/39881)) |
-| **Supported RTL languages** | 0 | 11 (hebrew, arabic, persian, urdu, pashto, kurdish, dari, uyghur, sindhi, yiddish, syriac) |
-| **Statusline** (model, context %, usage limits) | ✅ pre-installed | ✅ pre-installed (same `statusline.mjs`) |
-| **Light-blue "Kivun" terminal theme** | ✅ Windows Terminal color scheme | ✅ Konsole `KivunTerminal` profile + `ColorSchemeNoam` |
-| **Runtime (Windows)** | Windows Terminal (native) | WSL2 + Ubuntu + Konsole |
-| **Startup time** | ~2 s | ~6 s (Konsole launch) |
-| **Install footprint (Windows)** | ~150 MB | ~2 GB (WSL + Ubuntu) |
-| **macOS support** | ✅ .pkg | ❌ Deprecated as of v1.2.4 (no Mac terminal renders mixed Hebrew+English correctly — see [`mac/README.md`](mac/README.md)) |
-| **Linux support** | Windows + macOS only (Linux planned) | ✅ apt / dnf / pacman / zypper |
+| **Hebrew / Arabic / Persian text right-aligned** | ❌ shows left-aligned | ✅ aligns to the right where it belongs |
+| **English/code mixed inside a Hebrew sentence** | ❌ words pushed to the wrong edge | ✅ words land at the correct position in the sentence |
+| **Supported RTL languages** | 0 | 11 (Hebrew, Arabic, Persian, Urdu, Pashto, Kurdish, Dari, Uyghur, Sindhi, Yiddish, Syriac) |
+| **Live status bar** (model, context %, usage) | ✅ | ✅ |
+| **Light-blue Kivun theme** | ✅ Windows Terminal | ✅ Konsole |
+| **Right-click "Open with…" on a folder** | ✅ Windows Explorer | ✅ Windows Explorer + Linux file managers |
+| **Startup time** | ~2 s | ~6 s |
+| **Install size on Windows** | ~150 MB | ~2 GB (includes Ubuntu + Konsole) |
+| **macOS support** | ✅ | ❌ Deprecated as of v1.2.4 (no Mac terminal handles mixed Hebrew+English — see [`mac/README.md`](mac/README.md)) |
+| **Linux support** | ❌ | ✅ apt / dnf / pacman / zypper |
+
+> Technical details (BiDi wrapper, RLM injection, Konsole 23.x workarounds, etc.) live in the rest of this README and in [`docs/`](docs/) for anyone who wants them.
 
 ## What's included out of the box
 
