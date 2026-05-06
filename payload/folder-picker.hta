@@ -2,20 +2,19 @@
 <!--
   Kivun Terminal - Folder Picker (HTA dialog)
 
-  v1.3.1 fixes the v1.3.0 mojibake issue: em-dashes and ellipses
-  rendered as "ג€" / "ג€¦" because mshta defaulted to a non-UTF-8
-  legacy codepage. We now use ASCII-only text plus an explicit
-  UTF-8 meta tag, and the button captions are short enough not to
-  clip at 88px min-width.
+  v1.4.0 adds an inline Claude-flags picker — model selector,
+  conversation-continuation radios, skip-permissions checkbox,
+  free-text custom flags. Reads and writes back to
+  config.txt's CLAUDE_FLAGS line so the user never has to open
+  config.txt to manage Claude flags.
 
-  Same writeback contract as folder-picker.wsf: on OK with a valid
-  folder, writes the path to %LOCALAPPDATA%\Kivun-WSL\kivun-workdir.txt
-  as UTF-8 without BOM. On Cancel, exits without writing - the
-  launcher .bat treats a missing file as cancellation and falls back
-  to %USERPROFILE%.
+  Same writeback contract as before: on OK with a valid folder,
+  writes the chosen path to %LOCALAPPDATA%\Kivun-WSL\kivun-workdir.txt
+  as UTF-8 without BOM AND updates config.txt's CLAUDE_FLAGS line.
+  On Cancel, neither file is touched - launcher treats missing
+  workdir.txt as cancellation.
 
   Run with: mshta.exe folder-picker.hta
-  (use `start /wait mshta.exe ...` from a .bat to block on close)
 -->
 <html>
 <head>
@@ -31,7 +30,7 @@
   INNERBORDER="no"
   MAXIMIZEBUTTON="no"
   MINIMIZEBUTTON="no"
-  SCROLL="no"
+  SCROLL="auto"
   SELECTION="no"
   SHOWINTASKBAR="yes"
   SINGLEINSTANCE="yes"
@@ -44,26 +43,26 @@
     font-family: "Segoe UI", "Segoe UI Variable", Arial, sans-serif;
     font-size: 17px;
     margin: 0;
-    padding: 26px 36px;
+    padding: 22px 36px;
     background: #f3f3f3;
     color: #1c1c1c;
     box-sizing: border-box;
   }
   h1 {
-    font-size: 24px;
+    font-size: 23px;
     font-weight: 600;
-    margin: 0 0 12px 0;
+    margin: 0 0 10px 0;
     color: #1c1c1c;
   }
   .hint {
-    font-size: 16px;
+    font-size: 15px;
     color: #404040;
-    margin: 0 0 24px 0;
+    margin: 0 0 18px 0;
     line-height: 1.5;
   }
   .hint code, .hint kbd {
     font-family: "Consolas", "Cascadia Mono", monospace;
-    font-size: 15px;
+    font-size: 14px;
     background: #e8e8e8;
     padding: 2px 7px;
     border-radius: 3px;
@@ -73,35 +72,35 @@
     background: #fff;
     border: 1px solid #d4d4d4;
     border-radius: 6px;
-    padding: 18px 20px;
+    padding: 16px 20px;
     margin-bottom: 4px;
   }
   .opt-label {
-    font-size: 17px;
+    font-size: 16px;
     font-weight: 600;
     color: #1c1c1c;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
     display: flex;
     align-items: center;
     gap: 12px;
   }
   .opt-num {
     display: inline-block;
-    width: 28px;
-    height: 28px;
-    line-height: 28px;
+    width: 26px;
+    height: 26px;
+    line-height: 26px;
     text-align: center;
     background: #0078d4;
     color: #fff;
     border-radius: 50%;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 700;
     flex-shrink: 0;
   }
 
   .or-sep {
     text-align: center;
-    margin: 12px 0;
+    margin: 10px 0;
     position: relative;
   }
   .or-sep:before {
@@ -116,10 +115,10 @@
   .or-sep span {
     position: relative;
     display: inline-block;
-    padding: 0 18px;
+    padding: 0 16px;
     background: #f3f3f3;
     color: #606060;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 700;
     letter-spacing: 1.5px;
     z-index: 1;
@@ -128,9 +127,9 @@
   input[type=text] {
     width: 100%;
     box-sizing: border-box;
-    padding: 13px 16px;
+    padding: 12px 15px;
     font-family: "Consolas", "Cascadia Mono", "Segoe UI", monospace;
-    font-size: 18px;
+    font-size: 17px;
     border: 1px solid #b8b8b8;
     background: #fff;
     border-radius: 4px;
@@ -142,9 +141,9 @@
     box-shadow: 0 0 0 1px #0078d4;
   }
   button {
-    padding: 11px 20px;
+    padding: 10px 18px;
     font-family: "Segoe UI", Arial, sans-serif;
-    font-size: 16px;
+    font-size: 15px;
     background: #fafafa;
     border: 1px solid #b8b8b8;
     cursor: pointer;
@@ -163,38 +162,107 @@
   button.primary:hover { background: #1186e0; border-color: #00467a; }
   button.primary:active { background: #005a9e; }
   button.browse { min-width: 230px; font-weight: 600; }
-  button.config { min-width: 220px; }
+  button.config { min-width: 180px; font-size: 13px; }
   button.cancel { min-width: 110px; }
-  button.ok { min-width: 250px; font-size: 17px; }
+  button.ok { min-width: 250px; font-size: 16px; }
+
+  /* Flag picker */
+  .flag-grid {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 10px 14px;
+    align-items: center;
+    margin-top: 4px;
+  }
+  .flag-grid > .lbl {
+    font-weight: 600;
+    color: #303030;
+    font-size: 14px;
+    text-align: right;
+  }
+  .flag-grid select {
+    padding: 7px 10px;
+    font-family: "Segoe UI", Arial, sans-serif;
+    font-size: 14px;
+    border: 1px solid #b8b8b8;
+    background: #fff;
+    border-radius: 4px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .flag-grid select:focus {
+    outline: none;
+    border-color: #0078d4;
+    box-shadow: 0 0 0 1px #0078d4;
+  }
+  .radio-row, .check-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    font-size: 14px;
+    color: #303030;
+  }
+  .radio-row label, .check-row label {
+    cursor: pointer;
+    user-select: none;
+  }
+  .radio-row input, .check-row input {
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  .flag-grid input[type=text] {
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+  .flag-help {
+    font-size: 12px;
+    color: #707070;
+    margin-top: 2px;
+  }
+  .flag-preview {
+    margin-top: 12px;
+    padding: 9px 12px;
+    background: #f7f7f7;
+    border: 1px solid #d4d4d4;
+    border-radius: 4px;
+    font-family: "Consolas", "Cascadia Mono", monospace;
+    font-size: 13px;
+    color: #1c1c1c;
+    word-break: break-all;
+  }
+  .flag-preview .label {
+    color: #707070;
+    font-family: "Segoe UI", Arial, sans-serif;
+    font-size: 12px;
+    margin-right: 8px;
+  }
+
   .actions {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: 20px;
-    padding-top: 20px;
+    margin-top: 16px;
+    padding-top: 14px;
     border-top: 1px solid #d8d8d8;
   }
   .actions .right { display: flex; gap: 10px; }
   .err {
     color: #b00020;
-    font-size: 15px;
-    min-height: 20px;
-    margin: 10px 0 0 0;
+    font-size: 14px;
+    min-height: 18px;
+    margin: 8px 0 0 0;
     font-weight: 500;
   }
 </style>
 <script language="JScript">
-  // 1000x620 fits the larger v1.3.3 fonts (17px body, 18px input,
-  // 16px buttons, 24px headline). Earlier: 640x240 (v1.3.0),
-  // 880x340 (v1.3.1), 920x520 (v1.3.2).
-  window.resizeTo(1000, 620);
+  // 1000x860 fits the new flag picker section. Earlier window sizes:
+  // 1000x620 (v1.3.3-1.3.5), 920x520 (v1.3.2), 880x340 (v1.3.1).
+  window.resizeTo(1000, 860);
 
   var wshShell = new ActiveXObject("WScript.Shell");
   var fso = new ActiveXObject("Scripting.FileSystemObject");
   var shell = new ActiveXObject("Shell.Application");
 
-  // Resolve install dir from the URL of this HTA so config.txt lookups
-  // are relative and don't need an absolute path.
   function getInstallDir() {
     var url = decodeURIComponent(location.pathname).replace(/^\//, "").replace(/\//g, "\\");
     return fso.GetParentFolderName(url);
@@ -209,14 +277,14 @@
     fso.CreateFolder(kivunDir);
   }
 
-  // UTF-8-without-BOM write. Same code as the original .wsf so the
-  // launcher's `set /p PICKED=<file` reader sees the same bytes.
-  function writePath(p) {
+  // UTF-8 without BOM. Same code as the original: write text via ADODB
+  // stream, then strip the 3-byte BOM by reading from offset 3.
+  function writeUtf8NoBom(path, content) {
     var stream = new ActiveXObject("ADODB.Stream");
     stream.Type = 2;
     stream.Charset = "utf-8";
     stream.Open();
-    stream.WriteText(p);
+    stream.WriteText(content);
     stream.Position = 0;
     stream.Type = 1;
     stream.Position = 3;
@@ -224,24 +292,34 @@
     outStream.Type = 1;
     outStream.Open();
     stream.CopyTo(outStream);
-    outStream.SaveToFile(resultFile, 2);
+    outStream.SaveToFile(path, 2);
     outStream.Close();
     stream.Close();
   }
 
-  function clearError() {
-    document.getElementById("err").innerText = "";
+  function readUtf8(path) {
+    if (!fso.FileExists(path)) return "";
+    var stream = new ActiveXObject("ADODB.Stream");
+    stream.Type = 2;
+    stream.Charset = "utf-8";
+    stream.Open();
+    stream.LoadFromFile(path);
+    var text = stream.ReadText();
+    stream.Close();
+    return text;
   }
 
-  function showError(msg) {
-    document.getElementById("err").innerText = msg;
+  function writePath(p) {
+    writeUtf8NoBom(resultFile, p);
   }
+
+  function clearError() { document.getElementById("err").innerText = ""; }
+  function showError(msg) { document.getElementById("err").innerText = msg; }
 
   function browseFolder() {
     clearError();
     var startPath = wshShell.ExpandEnvironmentStrings("%USERPROFILE%");
-    // BIF_NEWDIALOGSTYLE | BIF_EDITBOX = 0x50. Modern dialog with its
-    // own embedded edit field as a fallback path-typing affordance.
+    // BIF_NEWDIALOGSTYLE | BIF_EDITBOX = 0x50.
     var folder = shell.BrowseForFolder(0, "Pick a folder", 0x50, startPath);
     if (folder != null) {
       document.getElementById("path").value = folder.Self.Path;
@@ -255,10 +333,102 @@
       showError("config.txt not found at " + configFile);
       return;
     }
-    // Open Notepad async (window style 1 = visible normal). User edits
-    // at their own pace; the picker stays open in front. Notepad-3rd-
-    // party (Notepad++/VS Code) opens via the user's .txt association.
     wshShell.Run("notepad.exe \"" + configFile + "\"", 1, false);
+  }
+
+  // ---- Flag picker ---------------------------------------------------
+
+  function getRadioValue(name) {
+    var radios = document.getElementsByName(name);
+    for (var i = 0; i < radios.length; i++) {
+      if (radios[i].checked) return radios[i].value;
+    }
+    return "";
+  }
+  function setRadioValue(name, value) {
+    var radios = document.getElementsByName(name);
+    for (var i = 0; i < radios.length; i++) {
+      if (radios[i].value == value) { radios[i].checked = true; return; }
+    }
+    if (radios.length) radios[0].checked = true;
+  }
+
+  function composeFlags() {
+    var parts = [];
+    var model = document.getElementById("flag-model").value;
+    if (model) parts.push("--model " + model);
+    var conv = getRadioValue("flag-conv");
+    if (conv) parts.push(conv);
+    if (document.getElementById("flag-skip-perm").checked) {
+      parts.push("--dangerously-skip-permissions");
+    }
+    var custom = document.getElementById("flag-custom").value;
+    custom = custom.replace(/^\s+|\s+$/g, "");
+    if (custom) parts.push(custom);
+    return parts.join(" ");
+  }
+
+  function updateFlagPreview() {
+    var s = composeFlags();
+    document.getElementById("flag-effective").innerText = s ? s : "(none — default Claude behavior)";
+  }
+
+  // Read CLAUDE_FLAGS=... line from config.txt and split it across
+  // the dropdown / radios / checkbox / custom field.
+  function loadFlagsFromConfig() {
+    var content = readUtf8(configFile);
+    var match = content.match(/^CLAUDE_FLAGS=(.*)$/m);
+    var current = match ? match[1].replace(/^\s+|\s+$/g, "") : "";
+    if (!current) { updateFlagPreview(); return; }
+
+    // --model X
+    var m = current.match(/--model\s+(\S+)/);
+    if (m) {
+      var modelEl = document.getElementById("flag-model");
+      for (var i = 0; i < modelEl.options.length; i++) {
+        if (modelEl.options[i].value == m[1]) { modelEl.selectedIndex = i; break; }
+      }
+      current = current.replace(m[0], "");
+    }
+
+    // --continue / --resume (mutually exclusive)
+    if (/(^|\s)--continue(\s|$)/.test(current)) {
+      setRadioValue("flag-conv", "--continue");
+      current = current.replace(/--continue/g, "");
+    } else if (/(^|\s)--resume(\s|$)/.test(current)) {
+      setRadioValue("flag-conv", "--resume");
+      current = current.replace(/--resume/g, "");
+    } else {
+      setRadioValue("flag-conv", "");
+    }
+
+    // --dangerously-skip-permissions
+    if (/(^|\s)--dangerously-skip-permissions(\s|$)/.test(current)) {
+      document.getElementById("flag-skip-perm").checked = true;
+      current = current.replace(/--dangerously-skip-permissions/g, "");
+    }
+
+    // Whatever's left becomes the custom field
+    current = current.replace(/\s+/g, " ").replace(/^\s+|\s+$/g, "");
+    document.getElementById("flag-custom").value = current;
+
+    updateFlagPreview();
+  }
+
+  // Replace the CLAUDE_FLAGS line in config.txt with our new value,
+  // preserve all other lines + comments. If the key is missing, append.
+  function writeFlagsToConfig(newFlags) {
+    var content = readUtf8(configFile);
+    if (!content) return;   // no config — nothing to write
+    if (/^CLAUDE_FLAGS=.*$/m.test(content)) {
+      content = content.replace(/^CLAUDE_FLAGS=.*$/m, "CLAUDE_FLAGS=" + newFlags);
+    } else {
+      // Append; keep CRLF style consistent with the rest of the file.
+      var nl = (content.indexOf("\r\n") >= 0) ? "\r\n" : "\n";
+      if (content.length && content.charAt(content.length - 1) !== "\n") content += nl;
+      content += "CLAUDE_FLAGS=" + newFlags + nl;
+    }
+    writeUtf8NoBom(configFile, content);
   }
 
   function ok() {
@@ -277,19 +447,15 @@
       document.getElementById("path").focus();
       return;
     }
+    // Persist the chosen flags to config.txt before launching, so the
+    // .bat reads them via the existing CLAUDE_FLAGS= parser.
+    try { writeFlagsToConfig(composeFlags()); } catch (e) { /* non-fatal */ }
     writePath(p);
     window.close();
   }
 
-  function cancel() {
-    // No file written -> launcher treats this as cancellation and
-    // falls back to %USERPROFILE%.
-    window.close();
-  }
+  function cancel() { window.close(); }
 
-  // Enter on the path field submits; Esc cancels. event.keyCode 13 =
-  // Enter, 27 = Esc. HTA renders in IE compatibility, so window.event
-  // works as a fallback if the parameter is null.
   function onKey(ev) {
     var e = ev || window.event;
     var k = e.keyCode;
@@ -299,6 +465,7 @@
   }
 
   function init() {
+    loadFlagsFromConfig();
     document.getElementById("path").focus();
   }
 </script>
@@ -306,11 +473,11 @@
 <body onload="init()">
   <h1>Pick a folder for Kivun Terminal</h1>
   <p class="hint">
-    Choose <b>one</b> of the two options below, then click <b>Launch Kivun Terminal</b> (or press <kbd>Enter</kbd>).
+    Choose <b>one</b> of the two options below, optionally tune the Claude flags, then click <b>Launch Kivun Terminal</b> (or press <kbd>Enter</kbd>).
   </p>
 
   <div class="option">
-    <div class="opt-label"><span class="opt-num">1</span> Type or paste a Windows path here:</div>
+    <div class="opt-label"><span class="opt-num">1</span> Type or paste a Windows path:</div>
     <input type="text" id="path" onkeydown="return onKey(event)" placeholder="C:\Users\you\Documents\MyProject" />
   </div>
 
@@ -321,8 +488,42 @@
     <button class="browse" onclick="browseFolder()">Browse Folder Tree...</button>
   </div>
 
+  <div class="option" style="margin-top:14px">
+    <div class="opt-label"><span class="opt-num">3</span> Claude flags (optional):</div>
+    <div class="flag-grid">
+      <div class="lbl">Model:</div>
+      <div>
+        <select id="flag-model" onchange="updateFlagPreview()">
+          <option value="">Default (let Claude decide)</option>
+          <option value="opus">Opus - most capable, slower / more expensive</option>
+          <option value="sonnet">Sonnet - balanced speed and capability</option>
+          <option value="haiku">Haiku - fastest, cheapest</option>
+        </select>
+      </div>
+
+      <div class="lbl">Conversation:</div>
+      <div class="radio-row">
+        <label><input type="radio" name="flag-conv" value="" onclick="updateFlagPreview()" checked /> Start fresh</label>
+        <label><input type="radio" name="flag-conv" value="--continue" onclick="updateFlagPreview()" /> Continue last (--continue)</label>
+        <label><input type="radio" name="flag-conv" value="--resume" onclick="updateFlagPreview()" /> Pick from history (--resume)</label>
+      </div>
+
+      <div class="lbl">Permissions:</div>
+      <div class="check-row">
+        <label><input type="checkbox" id="flag-skip-perm" onclick="updateFlagPreview()" /> Skip permission prompts (--dangerously-skip-permissions)</label>
+      </div>
+
+      <div class="lbl">Custom:</div>
+      <div>
+        <input type="text" id="flag-custom" onkeyup="updateFlagPreview()" placeholder="--append-system-prompt &quot;respond in Hebrew&quot;  --any-other-flag value" />
+        <div class="flag-help">Anything you type here is appended verbatim to the Claude command.</div>
+      </div>
+    </div>
+    <div class="flag-preview"><span class="label">Effective:</span><span id="flag-effective">(none)</span></div>
+  </div>
+
   <div class="actions">
-    <button class="config" onclick="editConfig()">Edit Default Flags</button>
+    <button class="config" onclick="editConfig()" title="Open config.txt in Notepad for advanced settings (language, theme, BiDi tunables)">Open config.txt (advanced)</button>
     <div class="right">
       <button class="cancel" onclick="cancel()">Cancel</button>
       <button class="primary ok" onclick="ok()">Launch Kivun Terminal</button>
