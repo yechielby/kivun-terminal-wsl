@@ -375,6 +375,12 @@
   }
 
   function loadFlagsFromConfig() {
+    // Force Opus as the default on every open. HTML "checked" alone is
+    // unreliable in HTA/IE-mode after the radio group has been touched
+    // by a previous run; this guarantees Opus wins unless config.txt's
+    // CLAUDE_FLAGS line explicitly names a different model below.
+    setRadioValue("flag-model", "opus");
+
     var content = readUtf8(configFile);
     var match = content.match(/^CLAUDE_FLAGS=(.*)$/m);
     var current = match ? match[1].replace(/^\s+|\s+$/g, "") : "";
@@ -509,13 +515,13 @@
         <label><input type="radio" name="flag-conv" value="--resume" onclick="updateFlagPreview()" /> Pick from history</label>
       </div>
 
-      <div class="lbl">Add a flag:</div>
+      <div class="lbl">Quick options:</div>
       <div class="chip-row">
-        <button type="button" class="chip" onclick='addCustomFlag("--fallback-model sonnet")' title="If the chosen model is overloaded, auto-switch to this one for the session">+ --fallback-model sonnet</button>
-        <button type="button" class="chip" onclick='addCustomFlag("--append-system-prompt &quot;respond in Hebrew&quot;")' title="Add custom instructions on top of Claude's default system prompt">+ --append-system-prompt</button>
-        <button type="button" class="chip" onclick='addCustomFlag("--effort high")' title="Effort level: low | medium | high — controls how much Claude thinks before answering">+ --effort high</button>
-        <button type="button" class="chip" onclick='addCustomFlag("--worktree")' title="Open the session inside a fresh git worktree (keeps experiments off your main branch)">+ --worktree</button>
-        <button type="button" class="chip" onclick='addCustomFlag("--verbose")' title="Show Claude's internal logs in the terminal (debugging)">+ --verbose</button>
+        <button type="button" class="chip" onclick='addCustomFlag("--append-system-prompt &quot;respond in Hebrew&quot;")' title="Asks Claude to reply in Hebrew (adds --append-system-prompt &quot;respond in Hebrew&quot;)">+ Respond in Hebrew</button>
+        <button type="button" class="chip" onclick='addCustomFlag("--fallback-model sonnet")' title="If Opus is busy or overloaded, auto-switch to Sonnet for this session (adds --fallback-model sonnet)">+ Fall back to Sonnet if Opus is busy</button>
+        <button type="button" class="chip" onclick='addCustomFlag("--effort high")' title="Tells Claude to think more carefully before answering — slower but more thorough (adds --effort high)">+ Take more care</button>
+        <button type="button" class="chip" onclick='addCustomFlag("--worktree")' title="Opens the session in a fresh git worktree, so experiments stay off your main branch (adds --worktree)">+ Fresh git worktree</button>
+        <button type="button" class="chip" onclick='addCustomFlag("--verbose")' title="Show Claude's full internal logs in the terminal — useful when reporting bugs (adds --verbose)">+ Verbose logs</button>
       </div>
 
       <div class="lbl">Custom:</div>
