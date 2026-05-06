@@ -259,8 +259,20 @@
   }
 </style>
 <script language="JScript">
-  // 1040x900 fits all four sections (path, browse, flags, startup-cmds).
-  window.resizeTo(1040, 900);
+  // Resize to fit all four sections WITHOUT scrolling. We use a generous
+  // 1040x980 baseline and then re-fit to actual content height after
+  // layout settles, so different DPI / font-render heights still get a
+  // scroll-free dialog. Caps at the screen size minus a small margin so
+  // the title bar + Windows taskbar stay visible on small displays.
+  window.resizeTo(1040, 980);
+  function autoSizeToContent() {
+    try {
+      var bodyHeight = document.body.scrollHeight + 60;  // chrome + margin
+      var screenH = window.screen.availHeight - 80;
+      var h = Math.min(bodyHeight, screenH);
+      if (h > 700) window.resizeTo(1040, h);
+    } catch (e) {}
+  }
 
   var wshShell = new ActiveXObject("WScript.Shell");
   var fso = new ActiveXObject("Scripting.FileSystemObject");
@@ -471,9 +483,32 @@
     return true;
   }
 
+  // Bind chip click handlers programmatically so the flag template
+  // strings (some containing embedded double-quotes) survive HTA's
+  // HTML-entity decoding pass intact. Inline onclick='addCustomFlag("…&quot;…&quot;…")'
+  // breaks because &quot; decodes to " before the JS engine sees it,
+  // producing a malformed string literal.
+  function bindChips() {
+    var chips = [
+      ["chip-hebrew",   '--append-system-prompt "respond in Hebrew"'],
+      ["chip-fallback", '--fallback-model sonnet'],
+      ["chip-effort",   '--effort high'],
+      ["chip-worktree", '--worktree'],
+      ["chip-verbose",  '--verbose']
+    ];
+    for (var i = 0; i < chips.length; i++) {
+      (function(template) {
+        var el = document.getElementById(chips[i][0]);
+        if (el) el.onclick = function() { addCustomFlag(template); };
+      })(chips[i][1]);
+    }
+  }
+
   function init() {
     deleteIfExists(startupFile);   // start each session fresh
+    bindChips();
     loadFlagsFromConfig();
+    autoSizeToContent();
     document.getElementById("path").focus();
   }
 </script>
@@ -517,11 +552,11 @@
 
       <div class="lbl">Quick options:</div>
       <div class="chip-row">
-        <button type="button" class="chip" onclick='addCustomFlag("--append-system-prompt &quot;respond in Hebrew&quot;")' title="Asks Claude to reply in Hebrew (adds --append-system-prompt &quot;respond in Hebrew&quot;)">+ Respond in Hebrew</button>
-        <button type="button" class="chip" onclick='addCustomFlag("--fallback-model sonnet")' title="If Opus is busy or overloaded, auto-switch to Sonnet for this session (adds --fallback-model sonnet)">+ Fall back to Sonnet if Opus is busy</button>
-        <button type="button" class="chip" onclick='addCustomFlag("--effort high")' title="Tells Claude to think more carefully before answering — slower but more thorough (adds --effort high)">+ Take more care</button>
-        <button type="button" class="chip" onclick='addCustomFlag("--worktree")' title="Opens the session in a fresh git worktree, so experiments stay off your main branch (adds --worktree)">+ Fresh git worktree</button>
-        <button type="button" class="chip" onclick='addCustomFlag("--verbose")' title="Show Claude's full internal logs in the terminal — useful when reporting bugs (adds --verbose)">+ Verbose logs</button>
+        <button type="button" class="chip" id="chip-hebrew" title="Adds: --append-system-prompt &quot;respond in Hebrew&quot;">+ Respond in Hebrew</button>
+        <button type="button" class="chip" id="chip-fallback" title="Adds: --fallback-model sonnet">+ Fall back to Sonnet if Opus is busy</button>
+        <button type="button" class="chip" id="chip-effort" title="Adds: --effort high">+ Take more care</button>
+        <button type="button" class="chip" id="chip-worktree" title="Adds: --worktree">+ Fresh git worktree</button>
+        <button type="button" class="chip" id="chip-verbose" title="Adds: --verbose">+ Verbose logs</button>
       </div>
 
       <div class="lbl">Custom:</div>
@@ -529,10 +564,6 @@
         <input type="text" id="flag-custom" onkeyup="updateFlagPreview()" placeholder="Click chips above, or type any flags here verbatim" />
         <div class="flag-help">Anything in this box is appended verbatim to the Claude command. Chips above append into here; you can also edit freely.</div>
       </div>
-    </div>
-
-    <div class="flag-tip">
-      <b>Tip:</b> to auto-accept tool permissions for the session, launch normally and press <kbd>Shift</kbd>+<kbd>Tab</kbd> inside Claude Code to toggle <i>auto mode</i>. Safer than <code>--dangerously-skip-permissions</code> because it stays scoped to the running session.
     </div>
 
     <div class="flag-preview"><span class="label">Effective:</span><span id="flag-effective">(none)</span></div>
