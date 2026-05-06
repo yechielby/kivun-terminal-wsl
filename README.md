@@ -71,6 +71,7 @@
 </p>
 
 - **Folder picker dialog** on the desktop shortcut (screenshot above) — browse the folder tree **or** type/paste a Windows path, plus inline radio-button model selection (Opus / Sonnet / Haiku), one-click flag chips (Respond in Hebrew, Low effort, High effort, Auto-accept file edits, Read-only, etc.), and a textarea for startup slash commands like `/voicemode:converse`.
+- **Named profiles (v1.4.0)** — save folder + model + flags + startup commands + env vars per project, switch between them from the dropdown at the top of the picker. Per-profile env vars (`ANTHROPIC_API_KEY`, `DEBUG`, custom `MCP_*`, …) are propagated through `WSLENV` on Windows / `export` on Linux. Values are masked in the resolved-command preview by default for screenshot safety.
 - **Right-click "Open with Kivun Terminal"** on any folder in File Explorer — launches straight into that folder, skipping the picker.
 - **Live two-line statusline** at the bottom of every Claude Code session — model, context %, total tokens, session duration, and 5-hour / 7-day usage with countdown to reset.
 - **Light-blue Kivun theme** for Konsole (`#C8E6FF` background) — easy on the eyes, on by default. Disable via `TERMINAL_COLOR=default`.

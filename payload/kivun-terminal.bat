@@ -493,6 +493,30 @@ for /f "tokens=1,2 delims==" %%a in ('wmic DESKTOPMONITOR GET screenwidth^,scree
 if defined MON_W if defined MON_H set "PRIMARY_MON=0 0 %MON_W% %MON_H%"
 call :LOG "INFO - Primary monitor bounds (wmic): %PRIMARY_MON%"
 
+REM v1.4.0: load per-profile env vars from kivun-env.txt (written by the
+REM picker HTA on Launch). Each KEY=VAL becomes an env var in this cmd
+REM scope AND gets appended to WSLENV so it crosses the WSL boundary —
+REM without WSLENV, Windows-side env vars don't reach the bash process.
+REM
+REM File schema: KEY=VAL one per line, # comments allowed, KEY validated
+REM by the picker as ^[A-Za-z_][A-Za-z0-9_]*$. tokens=1,* preserves any
+REM '=' that appears in VAL after the first one. eol=# skips comments.
+set "ENV_FILE=%LOCALAPPDATA%\Kivun-WSL\kivun-env.txt"
+if exist "%ENV_FILE%" (
+    call :LOG "INFO - Loading env vars from %ENV_FILE%"
+    for /f "usebackq eol=# tokens=1,* delims==" %%a in ("%ENV_FILE%") do (
+        if not "%%a"=="" call :ADDENV "%%a" "%%b"
+    )
+) else (
+    call :LOG "INFO - No %ENV_FILE% (no per-profile env vars to load)"
+)
+REM Log final WSLENV outside the (...) block. cmd parse-time-expands the
+REM body of an `if (...)` block ONCE when it reads the block, so a
+REM `%WSLENV%` reference inside would show the pre-loop value, not the
+REM value set by :ADDENV during the for loop. At top level, the line is
+REM re-expanded right before it runs and reflects the loop's side effect.
+if defined WSLENV call :LOG "INFO - WSLENV after env load: %WSLENV%"
+
 REM Launch via kivun-launch.sh (handles profile, colors, title, maximize).
 REM start /MIN opens the WSL bash subprocess console minimized so it doesn't
 REM clutter the desktop; all its output still goes to BASH_LAUNCH_LOG.txt.
@@ -570,6 +594,24 @@ exit /b
 :LOG
 echo [%TIME%] %~1 >> "%LOG_FILE%"
 echo [%TIME%] %~1
+exit /b
+
+REM ADDENV %1=KEY %2=VAL: set the env var in this cmd scope AND append KEY
+REM to WSLENV (colon-separated) so it propagates into the WSL bash that
+REM start-launches kivun-launch.sh. Quoted set form prevents cmd from
+REM interpreting & | ^ < > inside VAL — the picker validates KEY as
+REM [A-Za-z_][A-Za-z0-9_]* before writing kivun-env.txt, so KEY itself
+REM is always safe to use as a variable name. Subroutine pattern (vs.
+REM inline assignment in the for /f loop) avoids needing
+REM `setlocal enabledelayedexpansion` — vars set here persist to caller.
+:ADDENV
+if "%~1"=="" exit /b
+set "%~1=%~2"
+if defined WSLENV (
+    set "WSLENV=%WSLENV%:%~1"
+) else (
+    set "WSLENV=%~1"
+)
 exit /b
 
 :SET_LANG_PROMPT

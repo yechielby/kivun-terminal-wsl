@@ -103,6 +103,67 @@ jobs:
             || (echo "FAIL: deprecated 'sudo npm install -g' message still in .bat"; exit 1)
           echo "PASS: all v1.1.1 invariants intact"
 
+      - name: Verify v1.4.0 env-var loading invariants (Windows + Linux + picker)
+        run: |
+          set -eu
+          BAT=payload/kivun-terminal.bat
+          SH=linux/kivun-launch.sh
+          HTA=payload/folder-picker.hta
+
+          # ---- .bat side: env-load block + :ADDENV + WSLENV propagation ----
+          # The env-load block is essentially three pieces. If any goes missing,
+          # users will silently see "I set ANTHROPIC_API_KEY in my profile but
+          # claude doesn't see it" — exactly the failure mode WSLENV exists to
+          # prevent.
+          grep -q '^:ADDENV' "$BAT" \
+            || (echo "FAIL: :ADDENV subroutine missing from $BAT — env-var loading is broken"; exit 1)
+          grep -q 'kivun-env\.txt' "$BAT" \
+            || (echo "FAIL: $BAT does not reference kivun-env.txt — picker output ignored"; exit 1)
+          grep -q 'WSLENV' "$BAT" \
+            || (echo "FAIL: $BAT does not set WSLENV — env vars set on Windows side will never reach WSL"; exit 1)
+          # The :ADDENV body must include both the cmd-scope set AND the
+          # WSLENV append. A regression that drops either leaves env vars
+          # visible only on one side of the WSL boundary.
+          awk '/^:ADDENV/{in_block=1; lines=0} in_block{print; lines++; if(/^exit \/b/) exit}' "$BAT" \
+            | grep -q 'set "%~1=%~2"' \
+            || (echo "FAIL: :ADDENV does not set the env var via 'set \"%~1=%~2\"'"; exit 1)
+          awk '/^:ADDENV/{in_block=1; lines=0} in_block{print; lines++; if(/^exit \/b/) exit}' "$BAT" \
+            | grep -q 'WSLENV=%WSLENV%:%~1\|WSLENV=%~1' \
+            || (echo "FAIL: :ADDENV does not append the key to WSLENV"; exit 1)
+
+          # ---- Linux side: while-read loop + export, NEVER source ----
+          # `source kivun-env.txt` would re-evaluate $(...) and backticks in
+          # user-typed values — same RCE class the existing CLAUDE_FLAGS
+          # printf %q hardening guards against. The while-read+export pattern
+          # treats values as literal strings.
+          grep -q 'kivun-env\.txt' "$SH" \
+            || (echo "FAIL: $SH does not read kivun-env.txt"; exit 1)
+          grep -q 'while IFS= read' "$SH" \
+            || (echo "FAIL: $SH does not use a while-read loop for env vars (regression to source?)"; exit 1)
+          # Catch a regression to `source "$KIVUN_ENV_FILE"` or `. "$KIVUN_ENV_FILE"`.
+          # Match only lines that actually look like they're sourcing the env file —
+          # the launch-env.sh sourcing for CLAUDE_FLAGS is intentional and stays.
+          if grep -E '(source|^\s*\.)\s+"?\$KIVUN_ENV_FILE"?' "$SH" >/dev/null 2>&1; then
+            echo "FAIL: $SH sources kivun-env.txt — security regression (RCE via user-typed values)" >&2
+            exit 1
+          fi
+
+          # ---- Picker (HTA) side: env-var parsing + masking + profile JSON ----
+          # parseEnvVars validates KEY before the value reaches kivun-env.txt;
+          # without it, malformed lines could smuggle into WSLENV.
+          grep -q 'function parseEnvVars' "$HTA" \
+            || (echo "FAIL: $HTA missing parseEnvVars validator"; exit 1)
+          grep -q 'function writeEnvFile' "$HTA" \
+            || (echo "FAIL: $HTA missing writeEnvFile (kivun-env.txt will never be written)"; exit 1)
+          grep -q 'function loadProfiles' "$HTA" \
+            || (echo "FAIL: $HTA missing loadProfiles (profile bar non-functional)"; exit 1)
+          # Default-mask invariant: maskEnvValues must initialize to true.
+          # If someone flips the default to false, env values leak into
+          # screenshots silently — opposite of the explicit security choice.
+          grep -qE 'var\s+maskEnvValues\s*=\s*true' "$HTA" \
+            || (echo "FAIL: maskEnvValues default is not 'true' — values leak into preview by default"; exit 1)
+          echo "PASS: all v1.4.0 env-var invariants intact"
+
   # -------------------------------------------------------------------------
   # Job 2 — Run the .bat against real WSL+Ubuntu and validate LAUNCH_LOG.
   # Scenario: WSL+Ubuntu present, Konsole NOT installed (we deliberately
