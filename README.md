@@ -163,28 +163,6 @@ v1.1.0 ships a `kivun-claude-bidi` Node.js wrapper that pipes Claude Code's outp
 
 Toggle the wrapper itself via `KIVUN_BIDI_WRAPPER=on|off` in your config. Each individual fix has its own toggle (`KIVUN_BIDI_STRIP_BULLET`, `KIVUN_BIDI_STRIP_INCOMING`, `KIVUN_BIDI_FLATTEN_COLORS_RTL`, `KIVUN_BIDI_BRACKET_RTL_RUNS`). Test coverage as of v1.1.16: 87 injector unit fixtures + end-to-end smoke against a fake-claude stand-in via node-pty.
 
-## Architecture
-
-```mermaid
-graph TD
-    A[Installer .exe / install.sh] --> B{Dependency Check}
-    B -->|Missing| C[Install Konsole/Terminal + Node.js + Git]
-    B -->|Present| D[Skip]
-    C --> E[Install Claude Code via curl claude.ai/install.sh]
-    D --> E
-    E --> F[Deploy kivun-claude-bidi wrapper + npm install]
-    F --> G[Register Konsole profile + color scheme]
-    G --> H[Create Desktop Shortcut + Right-Click Integration]
-
-    subgraph Runtime
-        I[Launcher] --> J[Read config: KIVUN_BIDI_WRAPPER, RESPONSE_LANGUAGE, ...]
-        J --> K{Wrapper enabled?}
-        K -->|Yes| L[Spawn kivun-claude-bidi → claude]
-        K -->|No| M[Spawn claude directly]
-        L --> N[Konsole]
-        M --> N
-    end
-```
 
 ## Tech Stack
 
