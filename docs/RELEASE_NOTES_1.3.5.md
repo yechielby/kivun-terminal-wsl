@@ -6,7 +6,7 @@
 2. Run the installer — follow the wizard.
 3. Double-click the **Kivun Terminal** desktop shortcut.
 
-> **First launch:** the installer pulls in Ubuntu (via WSL2), Konsole, and Claude Code. Plan ~5–15 minutes the first time, depending on your network.
+> **First launch** can take 5–10 minutes — the installer pulls Ubuntu (WSL2), Konsole, and Claude Code on its own.
 
 ## Linux
 

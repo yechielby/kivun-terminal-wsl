@@ -49,17 +49,20 @@
 
 ## Why Kivun Terminal?
 
-|  | Launchpad CLI v2.4.2 | Kivun Terminal v1.2.4 |
+|  | Launchpad CLI | Kivun Terminal |
 |---|---|---|
-| **Runtime (Windows)** | Windows Terminal (native) | WSL2 + Ubuntu + Konsole |
-| **RTL/BiDi rendering** | LTR only (Windows Terminal has no BiDi engine) | ✅ Full RTL + line-start RLM fix for Claude's bullet-line direction bug ([anthropics/claude-code#39881](https://github.com/anthropics/claude-code/issues/39881)) |
-| **Supported RTL languages** | 0 | 11 (hebrew, arabic, persian, urdu, pashto, kurdish, dari, uyghur, sindhi, yiddish, syriac) |
-| **Linux support** | Windows + macOS only (Linux planned) | ✅ apt / dnf / pacman / zypper |
-| **macOS support** | ✅ .pkg | ❌ Deprecated as of v1.2.4 (no Mac terminal renders mixed Hebrew+English correctly — see [`mac/README.md`](mac/README.md)) |
-| **Statusline** (model, context %, usage limits) | ✅ pre-installed | ✅ pre-installed (same `statusline.mjs`) |
-| **Light-blue "Kivun" terminal theme** | ✅ Windows Terminal color scheme | ✅ Konsole `KivunTerminal` profile + `ColorSchemeNoam` |
-| **Startup time** | ~2 s | ~6 s (Konsole launch) |
-| **Install footprint (Windows)** | ~150 MB | ~2 GB (WSL + Ubuntu) |
+| **Hebrew / Arabic / Persian text right-aligned** | ❌ shows left-aligned | ✅ aligns to the right where it belongs |
+| **English/code mixed inside a Hebrew sentence** | ❌ words pushed to the wrong edge | ✅ words land at the correct position in the sentence |
+| **Supported RTL languages** | 0 | 11 (Hebrew, Arabic, Persian, Urdu, Pashto, Kurdish, Dari, Uyghur, Sindhi, Yiddish, Syriac) |
+| **Live status bar** (model, context %, usage) | ✅ | ✅ |
+| **Light-blue Kivun theme** | ✅ Windows Terminal | ✅ Konsole |
+| **Right-click "Open with…" on a folder** | ✅ Windows Explorer | ✅ Windows Explorer + Linux file managers |
+| **Startup time** | ~2 s | ~6 s |
+| **Install size on Windows** | ~150 MB | ~2 GB (includes Ubuntu + Konsole) |
+| **macOS support** | ✅ | ❌ Deprecated as of v1.2.4 (no Mac terminal handles mixed Hebrew+English — see [`mac/README.md`](mac/README.md)) |
+| **Linux support** | ❌ | ✅ apt / dnf / pacman / zypper |
+
+> Technical details (BiDi wrapper, RLM injection, Konsole 23.x workarounds, etc.) live in the rest of this README and in [`docs/`](docs/) for anyone who wants them.
 
 ## What's included out of the box
 
@@ -78,7 +81,7 @@
 2. Run it — follow the wizard. No admin rights required.
 3. Double-click the **Kivun Terminal** desktop shortcut → pick a folder (browse the tree or paste a Windows path), or right-click any folder in File Explorer → **Open with Kivun Terminal**.
 
-That's it for the happy path. The installer auto-pulls Ubuntu (WSL2) + Konsole + Claude Code on the first launch — plan ~5–15 minutes the first time, depending on your network.
+First launch can take 5–10 minutes — the installer pulls Ubuntu (WSL2), Konsole, and Claude Code on its own.
 
 <details>
 <summary>If something goes wrong: WSL not installed / SAC blocks / SmartScreen warning</summary>
@@ -202,8 +205,30 @@ Per-platform config files (same schema across all three):
 RESPONSE_LANGUAGE=hebrew         # 23+ languages supported
 TEXT_DIRECTION=rtl               # rtl or ltr
 KIVUN_BIDI_WRAPPER=on            # on (default) or off
-CLAUDE_FLAGS=                    # e.g. --continue
+FOLDER_PICKER=true               # show the picker dialog from the desktop shortcut
+CLAUDE_FLAGS=                    # default Claude flags applied to every launch
 ```
+
+### Default Claude flags
+
+`CLAUDE_FLAGS` is appended to every `claude` invocation Kivun starts — so you can pin model selection, conversation continuation, etc. without typing flags every time. Example:
+
+```ini
+CLAUDE_FLAGS=--model opus --continue
+```
+
+The full reference of supported flags (sourced from `claude --help`, ~25 options) lives at the bottom of `config.txt` itself for easy lookup. Common ones:
+
+| Flag | What it does |
+|---|---|
+| `--model opus` | force Claude Opus for this session (instead of the default) |
+| `--model sonnet` | force Claude Sonnet |
+| `--continue` | resume the most recent conversation in this folder |
+| `--resume` | open the conversation picker and pick which past chat to resume |
+| `--dangerously-skip-permissions` | skip the per-tool permission prompts (use with care) |
+| `--append-system-prompt "..."` | add custom instructions to the system prompt |
+
+You can also edit `CLAUDE_FLAGS` from inside the folder picker dialog — click **Edit Default Flags** to open `config.txt` in Notepad, edit, save, then launch.
 
 See `docs/CHANGELOG.md` for the full list of supported languages and config keys.
 
@@ -267,7 +292,7 @@ The surfaces (generic browser DOM, Claude.ai web UI, VS Code / IDE webview, Micr
 הוראות ההתקנה מפורטות באנגלית בקטעי **Quick Start** למעלה. הפקודות (`npm install`, נתיבים וכד') זהות בכל השפות ולא תורגמו. בקצרה:
 
 <ul dir="rtl" align="right">
-<li><strong>Windows:</strong> מורידים את <a href="https://github.com/noambrand/kivun-terminal-wsl/releases/latest/download/Kivun_Terminal_Setup.exe"><code>Kivun_Terminal_Setup.exe</code></a> ומריצים את האשף. ההתקנה תורידה אוטומטית את WSL2 + Ubuntu + Konsole + Claude Code בהפעלה הראשונה (~5–15 דקות, תלוי ברשת). אם WSL2 עדיין לא מותקן, האשף יבקש לפתוח <strong>Terminal (Admin)</strong> ולהריץ <code>wsl --install</code> חד-פעמית ולאתחל - פעולה חד-פעמית למחשב.</li>
+<li><strong>Windows:</strong> מורידים את <a href="https://github.com/noambrand/kivun-terminal-wsl/releases/latest/download/Kivun_Terminal_Setup.exe"><code>Kivun_Terminal_Setup.exe</code></a> ומריצים את האשף. ההתקנה הראשונה לוקחת 5–10 דקות (המתקין מוריד WSL2 + Ubuntu + Konsole + Claude Code לבד). אם WSL2 עדיין לא מותקן, האשף יבקש לפתוח <strong>Terminal (Admin)</strong> ולהריץ <code>wsl --install</code> חד-פעמית ולאתחל - פעולה חד-פעמית למחשב.</li>
 <li><strong>Linux:</strong> <code>git clone</code> + <code>./linux/install.sh</code>. תומך ב-apt/dnf/pacman/zypper.</li>
 <li><strong>macOS:</strong> לא נתמך מ-v1.2.4 ואילך - ראו <a href="mac/README.md"><code>mac/README.md</code></a>.</li>
 </ul>
