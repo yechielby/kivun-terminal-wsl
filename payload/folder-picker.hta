@@ -387,10 +387,10 @@
   }
 
   function loadFlagsFromConfig() {
-    // Force Opus as the default on every open. HTML "checked" alone is
-    // unreliable in HTA/IE-mode after the radio group has been touched
-    // by a previous run; this guarantees Opus wins unless config.txt's
-    // CLAUDE_FLAGS line explicitly names a different model below.
+    // Opus is ALWAYS the default radio when the picker opens. We do not
+    // restore the previously-launched model from config.txt — the user
+    // wants to make a fresh choice every session, and a stale "--model
+    // haiku" from yesterday's experiment shouldn't quietly carry over.
     setRadioValue("flag-model", "opus");
 
     var content = readUtf8(configFile);
@@ -398,10 +398,10 @@
     var current = match ? match[1].replace(/^\s+|\s+$/g, "") : "";
     if (!current) { updateFlagPreview(); return; }
 
-    // --model X
+    // --model X: strip from `current` so it doesn't pollute the custom
+    // textbox, but do NOT use it to override the radio above.
     var m = current.match(/--model\s+(\S+)/);
     if (m) {
-      setRadioValue("flag-model", m[1]);
       current = current.replace(m[0], "");
     }
 
