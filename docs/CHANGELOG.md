@@ -3,6 +3,15 @@
 All notable changes to Kivun Terminal are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.4.2] - 2026-05-06
+
+### Drop "Low effort" chip from the picker
+
+User feedback: *"you put effort low as a default? use high"*. The chip was a visible suggestion in the flag-chips row (alongside Hebrew, Concise, Step-by-step, Tests, etc.); even though it required a click to activate, presenting "Low effort" as a one-click suggestion read as endorsement of the lazy-Claude path.
+
+- **`payload/folder-picker.hta`** — removed `chip-effort-low` from both the `bindChips` template list and the HTML chip row. `chip-effort-high` (`+ High effort`) remains. The `--effort low` regex still appears in `replaceablePatterns` so the High chip continues to replace any prior `--effort X` value rather than appending — meaning a user who had `--effort low` saved in a profile won't see it duplicated when they click `+ High effort`. Power users who want low-effort runs can still type `--effort low` into the Custom flags field manually; the chip just stops suggesting it.
+
+
 ## [1.4.1] - 2026-05-06
 
 ### Fix: profile bar uses chip buttons, not `<select>` dropdown
