@@ -66,7 +66,11 @@
 
 ## What's included out of the box
 
-- **Folder picker dialog** on the desktop shortcut — browse the folder tree **or** type/paste a Windows path directly in the same dialog (no separate prompt to wade through). Cancel = open in your home directory.
+<p align="center">
+  <img src="picker.png" alt="Kivun Terminal folder picker — folder selection, model + flag chips, startup slash commands, all in one dialog" width="780">
+</p>
+
+- **Folder picker dialog** on the desktop shortcut (screenshot above) — browse the folder tree **or** type/paste a Windows path, plus inline radio-button model selection (Opus / Sonnet / Haiku), one-click flag chips (Respond in Hebrew, Low effort, High effort, Auto-accept file edits, Read-only, etc.), and a textarea for startup slash commands like `/voicemode:converse`.
 - **Right-click "Open with Kivun Terminal"** on any folder in File Explorer — launches straight into that folder, skipping the picker.
 - **Live two-line statusline** at the bottom of every Claude Code session — model, context %, total tokens, session duration, and 5-hour / 7-day usage with countdown to reset.
 - **Light-blue Kivun theme** for Konsole (`#C8E6FF` background) — easy on the eyes, on by default. Disable via `TERMINAL_COLOR=default`.
