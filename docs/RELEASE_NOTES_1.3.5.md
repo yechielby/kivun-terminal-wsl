@@ -24,7 +24,7 @@ cd kivun-terminal-linux-1.3.5
 
 ### Folder picker dialog
 
-![Folder picker dialog](https://raw.githubusercontent.com/noambrand/kivun-terminal-wsl/main/picker.png)
+![Folder picker dialog](https://github.com/noambrand/kivun-terminal-wsl/releases/download/v1.3.5/picker.png)
 
 Double-clicking the desktop shortcut now opens a folder picker with two clearly numbered options:
 

@@ -67,7 +67,7 @@
 ## What's included out of the box
 
 <p align="center">
-  <img src="picker.png" alt="Kivun Terminal folder picker — folder selection, model + flag chips, startup slash commands, all in one dialog" width="780">
+  <img src="https://github.com/noambrand/kivun-terminal-wsl/releases/download/v1.3.5/picker.png" alt="Kivun Terminal folder picker — folder selection, model + flag chips, startup slash commands, all in one dialog" width="780">
 </p>
 
 - **Folder picker dialog** on the desktop shortcut (screenshot above) — browse the folder tree **or** type/paste a Windows path, plus inline radio-button model selection (Opus / Sonnet / Haiku), one-click flag chips (Respond in Hebrew, Low effort, High effort, Auto-accept file edits, Read-only, etc.), and a textarea for startup slash commands like `/voicemode:converse`.
