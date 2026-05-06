@@ -3,6 +3,21 @@
 All notable changes to Kivun Terminal are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.4.3] - 2026-05-06
+
+### Three picker fixes from continued user testing
+
+User feedback after v1.4.2: *"still the defualt is --effort low"*, *"unser Custom: that is what is writes as a placeholder, hate it"*, and the standing *"i see no profile"* concern about chip rendering.
+
+- **`payload/folder-picker.hta`** — `populateProfileChips` rewritten to build chip HTML as a single `innerHTML` string with inline `onclick="switchToProfile('Name')"` attributes. v1.4.1's `createElement + .onclick =` pattern works on STATIC elements (the existing flag chips) but is unreliable on DYNAMICALLY created buttons under HTA / mshta — handlers sometimes don't fire even though the button renders. innerHTML construction sidesteps this by letting IE parse the attribute string into a real onclick handler at render time. Profile name escaping: HTML entities for `& < > "` plus `&#39;` for the single quote we use to delimit the JS string literal in the onclick attribute.
+- **`payload/folder-picker.hta`** — new `scrubDeprecatedFlags(profile)` runs on every `loadProfiles()` call. Right now it just strips `--effort low` from `customFlags` (v1.4.2 dropped the chip but didn't touch persisted profile data; users with `CLAUDE_FLAGS=--effort low` in config.txt before v1.4.0 had it migrated into the Default profile and would still see it after the chip removal). The scrub also persists via `saveProfiles()` so the cleanup runs once, not forever. Migration path also runs the scrubber so a stale config.txt doesn't seed a fresh profile with the same junk.
+- **`payload/folder-picker.hta`** — Custom flags textbox `placeholder` attribute emptied. v1.3.0–v1.4.2 said *"Click chips above, or type any flags here verbatim"* — user reported they hate it. Empty placeholder is the safest default; the help text below the input still explains what the field does.
+
+### Why the chip-rendering bug didn't catch in CI
+
+Static-lint verifies the JS functions exist and basic invariants hold (`maskEnvValues=true`, `parseEnvVars` present, etc.) but doesn't actually run the HTA — IE COM + Windows runner setup is significant overhead for one widget choice. Project memory `project_kivun_picker_features.md` already warned about HTA event-handler quirks but the warning was specifically about `<select> onchange`; it didn't generalize to "all dynamically-created elements." Memory updated implicitly through this changelog entry; for v1.4.4+ work, treat ANY dynamically-created HTA element with a JS-attached event handler as suspect, and prefer innerHTML construction with inline onclick attributes.
+
+
 ## [1.4.2] - 2026-05-06
 
 ### Drop "Low effort" chip from the picker
