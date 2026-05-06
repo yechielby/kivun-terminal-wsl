@@ -3,6 +3,21 @@
 All notable changes to Kivun Terminal are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.4.1] - 2026-05-06
+
+### Fix: profile bar uses chip buttons, not `<select>` dropdown
+
+v1.4.0 shipped the profile bar with `<select id="profile-select" onchange="onProfileChange()">`. Project memory `project_kivun_picker_features.md` (originating session: dfa960fd-cc96-4356-a34d-0649fa667826) explicitly warned against this — the user previously reported that `<select onchange>` doesn't fire reliably under HTA/IE-mode mshta, and the fix for the model-selection UI was to switch to radios. I made the same mistake here. User immediately spotted it: *"are you sure a dropdown will even work on the html? we had issues before"*.
+
+- **`payload/folder-picker.hta`** — replaced the profile `<select>` + `onchange` handler with a horizontal row of chip-style `<button>` elements, one per saved profile. The active profile gets `.active` styling (blue background, white text). Each chip's `onclick` is bound via a closure (IIFE captures the profile name so the iteration variable doesn't collapse to the last value — a JScript ES3 trap). The new flow: click any chip → outgoing profile auto-saves → incoming profile loads → row re-renders so the active highlight moves. The "Save As…" button is renamed `+ New` for visual parity with the chip aesthetic. `Rename` and `Delete` buttons unchanged.
+- **Why chips and not radios** — model selection has 4 fixed options (Default/Opus/Sonnet/Haiku) which suit radios. Profile names are user-defined and the count grows over time; radios become unwieldy past ~5 options. Chips scale to ~10–15 profiles before wrapping to a second row, and they read as "click to switch" rather than "select then submit," which matches what the action actually does.
+- **JScript closure pattern** — `for (var i = 0; i < profiles.length; i++) { btn.onclick = function() { switchToProfile(profiles[i].name); } }` is the wrong pattern in ES3: by the time the click fires, `i` has incremented to `profiles.length`, so every chip switches to the same (out-of-bounds) profile. The fix is an IIFE: `(function(name) { btn.onclick = function() { switchToProfile(name); }; })(profiles[i].name)`. The flag-chip code at line 532 already uses this pattern; profile chips now do too.
+
+### Migration
+
+No data migration. `profiles.json` schema is unchanged. Existing v1.4.0 installs (if any) — the picker just renders chips instead of a dropdown when reopened. No reinstall is required to fix existing `profiles.json`; only the picker UI needs the new HTA.
+
+
 ## [1.4.0] - 2026-05-06
 
 ### Named profiles in the folder picker (+ env vars + masked preview)

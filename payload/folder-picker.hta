@@ -258,11 +258,13 @@
     font-weight: 500;
   }
 
-  /* Profile bar (v1.4.0) - sits above the main dialog body */
+  /* Profile bar (v1.4.0; chip-button refactor in v1.4.1 — HTA's <select>
+     onchange is unreliable per project memory; chip onclick fires reliably) */
   .profile-bar {
     display: flex;
     align-items: center;
-    gap: 10px;
+    flex-wrap: wrap;
+    gap: 8px;
     background: #ffffff;
     border: 1px solid #cfd8dc;
     border-radius: 6px;
@@ -273,19 +275,42 @@
     font-size: 13px;
     font-weight: 600;
     color: #303030;
+    margin-right: 4px;
   }
-  .profile-bar select {
+  .profile-chip-row {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 4px;
     flex: 1;
-    padding: 6px 9px;
-    font-family: "Segoe UI", Arial, sans-serif;
-    font-size: 13px;
-    border: 1px solid #b8b8b8;
-    border-radius: 3px;
-    background: #fff;
     min-width: 200px;
   }
-  .profile-bar button {
-    padding: 6px 11px;
+  .profile-chip-row button.profile-chip {
+    padding: 5px 12px;
+    font-size: 12px;
+    font-family: "Segoe UI", Arial, sans-serif;
+    background: #f4f4f4;
+    border: 1px solid #c8c8c8;
+    color: #303030;
+    border-radius: 14px;
+    cursor: pointer;
+    min-width: 0;
+    white-space: nowrap;
+  }
+  .profile-chip-row button.profile-chip:hover {
+    background: #e5e5e5;
+    border-color: #888;
+  }
+  .profile-chip-row button.profile-chip.active {
+    background: #0078d4;
+    border-color: #005a9e;
+    color: #fff;
+    font-weight: 600;
+  }
+  .profile-chip-row button.profile-chip.active:hover {
+    background: #1186e0;
+  }
+  .profile-bar > button {
+    padding: 5px 10px;
     font-size: 12px;
     min-width: 0;
   }
@@ -293,7 +318,7 @@
     font-size: 11px;
     color: #707070;
     margin-left: 4px;
-    min-width: 90px;
+    min-width: 80px;
   }
   .profile-bar .status.saved { color: #2e7d32; }
 
@@ -814,37 +839,49 @@
     updateFlagPreview();
   }
 
-  function populateProfileDropdown() {
-    var sel = document.getElementById("profile-select");
-    while (sel.firstChild) sel.removeChild(sel.firstChild);
-    for (var i = 0; i < profilesState.profiles.length; i++) {
-      var opt = document.createElement("option");
-      opt.value = profilesState.profiles[i].name;
-      opt.text  = profilesState.profiles[i].name;
-      if (profilesState.profiles[i].name === profilesState.active) opt.selected = true;
-      sel.appendChild(opt);
-    }
-  }
-
   // Track which profile is currently shown in the dialog so a switch
   // saves the outgoing edits before loading the incoming profile.
   var currentDialogProfile = null;
 
-  function onProfileChange() {
-    // Save outgoing dialog state into its profile object
+  // v1.4.1: chip buttons replace <select>. HTA's <select> onchange does not
+  // fire reliably (project memory project_kivun_picker_features.md), and the
+  // same fix worked for model selection. One <button class="profile-chip">
+  // per saved profile; the active one gets .active styling. Closure binds
+  // the profile name into each chip's onclick so iteration variable doesn't
+  // collapse to the last value (a JScript ES3 trap).
+  function populateProfileChips() {
+    var row = document.getElementById("profile-chips");
+    if (!row) return;
+    while (row.firstChild) row.removeChild(row.firstChild);
+    for (var i = 0; i < profilesState.profiles.length; i++) {
+      (function (name, isActive) {
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "profile-chip" + (isActive ? " active" : "");
+        btn.innerText = name;
+        btn.title = isActive ? "Active profile — already loaded" : "Switch to profile: " + name;
+        btn.onclick = function () { switchToProfile(name); };
+        row.appendChild(btn);
+      })(profilesState.profiles[i].name, profilesState.profiles[i].name === profilesState.active);
+    }
+  }
+
+  function switchToProfile(name) {
+    if (name === currentDialogProfile) return;  // already active, no-op
+    // Save outgoing dialog state into its profile object so edits the user
+    // made to the previously-active profile aren't lost on switch.
     if (currentDialogProfile) {
       var idxOut = findProfile(currentDialogProfile);
       if (idxOut >= 0) {
         captureDialogToProfile(profilesState.profiles[idxOut]);
       }
     }
-    var sel = document.getElementById("profile-select");
-    var name = sel.value;
     profilesState.active = name;
     var idxIn = findProfile(name);
     if (idxIn >= 0) {
       applyProfileToDialog(profilesState.profiles[idxIn]);
       currentDialogProfile = name;
+      populateProfileChips();  // re-render so .active styling moves
       saveProfiles();
       flashStatus("loaded");
     }
@@ -871,7 +908,7 @@
     profilesState.profiles.push(p);
     profilesState.active = name;
     currentDialogProfile = name;
-    populateProfileDropdown();
+    populateProfileChips();
     saveProfiles();
     flashStatus("saved");
   }
@@ -890,7 +927,7 @@
     profilesState.profiles[idx].name = newName;
     profilesState.active = newName;
     currentDialogProfile = newName;
-    populateProfileDropdown();
+    populateProfileChips();
     saveProfiles();
     flashStatus("saved");
   }
@@ -913,7 +950,7 @@
     }
     profilesState.active = profilesState.profiles[0].name;
     currentDialogProfile = profilesState.active;
-    populateProfileDropdown();
+    populateProfileChips();
     applyProfileToDialog(profilesState.profiles[0]);
     saveProfiles();
     flashStatus("saved");
@@ -968,7 +1005,7 @@
       deleteIfExists(envFile);       // env file too — only the chosen profile's vars apply
       bindChips();
       loadProfiles();
-      populateProfileDropdown();
+      populateProfileChips();
       var active = getActiveProfile();
       currentDialogProfile = active.name;
       applyProfileToDialog(active);
@@ -985,8 +1022,8 @@
 <body onload="init()">
   <div class="profile-bar">
     <span class="lbl">Profile:</span>
-    <select id="profile-select" onchange="onProfileChange()"></select>
-    <button type="button" onclick="saveProfileAs()" title="Save current settings as a new profile">Save As…</button>
+    <span id="profile-chips" class="profile-chip-row"></span>
+    <button type="button" onclick="saveProfileAs()" title="Save current settings as a new profile">+ New</button>
     <button type="button" onclick="renameProfile()" title="Rename the current profile">Rename</button>
     <button type="button" onclick="deleteProfile()" title="Delete the current profile (Default cannot be deleted)">Delete</button>
     <span class="status" id="profile-status"></span>
