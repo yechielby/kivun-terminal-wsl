@@ -57,6 +57,7 @@
 | **Live status bar** (model, context %, usage) | ✅ | ✅ |
 | **Light-blue Kivun theme** | ✅ Windows Terminal | ✅ Konsole |
 | **Right-click "Open with…" on a folder** | ✅ Windows Explorer | ✅ Windows Explorer + Linux file managers |
+| **Named profiles per project** (folder + model + flags + env vars + startup slash-commands) | ❌ | ✅ **🆕 v1.4.0** — chip row at top of picker; per-profile `ANTHROPIC_API_KEY`/`DEBUG`/`MCP_*` propagated via `WSLENV`; masked in preview by default |
 | **Startup time** | ~2 s | ~6 s |
 | **Install size on Windows** | ~150 MB | ~2 GB (includes Ubuntu + Konsole) |
 | **macOS support** | ✅ | ❌ Deprecated as of v1.2.4 (no Mac terminal handles mixed Hebrew+English — see [`mac/README.md`](mac/README.md)) |
@@ -67,11 +68,11 @@
 ## What's included out of the box
 
 <p align="center">
-  <img src="picker.png" alt="Kivun Terminal folder picker — folder selection, model + flag chips, startup slash commands, all in one dialog" width="780">
+  <img src="picker.png" alt="Kivun Terminal folder picker (v1.4.x) — profile chip row at top, folder selection, model radios, flag chips, startup slash-commands, env-vars section, all in one dialog" width="780">
 </p>
 
-- **Folder picker dialog** on the desktop shortcut (screenshot above) — browse the folder tree **or** type/paste a Windows path, plus inline radio-button model selection (Opus / Sonnet / Haiku), one-click flag chips (Respond in Hebrew, Low effort, High effort, Auto-accept file edits, Read-only, etc.), and a textarea for startup slash commands like `/voicemode:converse`.
-- **Named profiles (v1.4.0)** — save folder + model + flags + startup commands + env vars per project, switch between them from the dropdown at the top of the picker. Per-profile env vars (`ANTHROPIC_API_KEY`, `DEBUG`, custom `MCP_*`, …) are propagated through `WSLENV` on Windows / `export` on Linux. Values are masked in the resolved-command preview by default for screenshot safety.
+- **🆕 Named profiles (v1.4.0+)** — save folder + model + flags + startup slash-commands + environment variables per project. The chip row at the top of the picker lets you switch between profiles in one click; the active profile is highlighted blue. Per-profile env vars (`ANTHROPIC_API_KEY`, `DEBUG`, custom `MCP_*`, …) are propagated through `WSLENV` on Windows / `export` on Linux so they reach the Claude Code session. Values are masked in the resolved-command preview by default for screenshot safety; click `👁 show values` to reveal.
+- **Folder picker dialog** on the desktop shortcut (screenshot above) — browse the folder tree **or** type/paste a Windows path, plus inline radio-button model selection (Opus / Sonnet / Haiku), one-click flag chips (Respond in Hebrew, High effort, Auto-accept file edits, Read-only, etc.), and a textarea for startup slash commands like `/voicemode:converse`.
 - **Right-click "Open with Kivun Terminal"** on any folder in File Explorer — launches straight into that folder, skipping the picker.
 - **Live two-line statusline** at the bottom of every Claude Code session — model, context %, total tokens, session duration, and 5-hour / 7-day usage with countdown to reset.
 - **Light-blue Kivun theme** for Konsole (`#C8E6FF` background) — easy on the eyes, on by default. Disable via `TERMINAL_COLOR=default`.
@@ -267,6 +268,7 @@ The surfaces (generic browser DOM, Claude.ai web UI, VS Code / IDE webview, Micr
 - ✅ סטטוסליין חי בתחתית המסך (מודל פעיל, אחוז קונטקסט, מגבלות שימוש)
 - ✅ קיצור דרך לשולחן העבודה + תפריט קליק ימני על תיקיות
 - ✅ Folder picker - דיאלוג אחד: עיון בעץ התיקיות או הקלדה/הדבקה של נתיב באותו חלון
+- 🆕 <strong>פרופילים בעלי שם לפי פרויקט</strong> (v1.4.0) - שמירת תיקייה + מודל + flags + פקודות slash + משתני סביבה לכל פרויקט. שורת הצ'יפים בראש החלון מאפשרת מעבר בין פרופילים בקליק אחד; הפרופיל הפעיל מודגש בכחול. משתני הסביבה לכל פרופיל (כמו <code>ANTHROPIC_API_KEY</code>) עוברים דרך <code>WSLENV</code> ל-WSL ומגיעים ל-Claude Code. ערכים מוסתרים בתצוגה כברירת מחדל - בטוח לצילום מסך.
 - ✅ Alt+Shift להחלפה בין עברית לאנגלית בתוך הטרמינל
 - ✅ נתמך על Windows ו-Linux (apt/dnf/pacman/zypper). תמיכת macOS הוסרה ב-v1.2.4 - ראו <a href="mac/README.md"><code>mac/README.md</code></a>
 
