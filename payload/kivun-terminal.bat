@@ -115,6 +115,14 @@ REM launcher's empty-WORK_DIR guard then substituted %USERPROFILE%, and
 REM the user's chosen folder was silently discarded. Top-level statements
 REM between labels evaluate %VAR% at runtime, so the picker result
 REM actually reaches WORK_DIR.
+REM PICKER_INVOKED tracks whether the HTA dialog actually ran. When the
+REM picker DID run but produced no kivun-workdir.txt, that means the user
+REM clicked Cancel (or hit Esc / closed the X) — and the user-stated
+REM contract is "Cancel terminates", so the launcher exits without
+REM starting Konsole. The pre-Cancel-fix behavior was to silently fall
+REM back to %USERPROFILE%, which from the user's POV looked exactly like
+REM "Launch fired itself".
+set "PICKER_INVOKED=0"
 if /i not "%FOLDER_PICKER:~0,4%"=="true" goto :picker_done
 if not "%~1"=="" goto :picker_done
 call :LOG "INFO - FOLDER_PICKER enabled, launching HTA dialog"
@@ -124,6 +132,7 @@ if not exist "%~dp0folder-picker.hta" (
         call :LOG "WARNING - folder-picker.wsf also not found; skipping picker"
         goto :picker_done
     )
+    set "PICKER_INVOKED=1"
     cscript //Nologo "%~dp0folder-picker.wsf" >nul 2>&1
     goto :picker_read
 )
@@ -139,18 +148,23 @@ REM was unreliably synchronous in some configurations — Konsole
 REM could begin launching before the user finished with the picker
 REM dialog. Direct invocation guarantees the .bat blocks until the
 REM dialog window closes.
+set "PICKER_INVOKED=1"
 mshta.exe "%~dp0folder-picker.hta"
 :picker_read
 if not exist "%LOCALAPPDATA%\Kivun-WSL\kivun-workdir.txt" (
-    call :LOG "INFO - User cancelled folder picker, using default: %WORK_DIR%"
-    goto :picker_done
+    call :LOG "INFO - User cancelled folder picker — terminating launcher"
+    echo.
+    echo Cancelled.
+    exit /b 0
 )
 set "PICKED="
 set /p PICKED=<"%LOCALAPPDATA%\Kivun-WSL\kivun-workdir.txt"
 del "%LOCALAPPDATA%\Kivun-WSL\kivun-workdir.txt" >nul 2>&1
 if not defined PICKED (
-    call :LOG "INFO - Picker file empty, using default: %WORK_DIR%"
-    goto :picker_done
+    call :LOG "INFO - Picker file empty (treated as cancel) — terminating launcher"
+    echo.
+    echo Cancelled.
+    exit /b 0
 )
 set "WORK_DIR=%PICKED%"
 call :LOG "SUCCESS - User picked folder: %PICKED%"
