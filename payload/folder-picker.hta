@@ -772,6 +772,22 @@
     return p;
   }
 
+  // v1.4.3: scrub deprecated/dropped flags from each profile's customFlags
+  // on load. Right now this just removes `--effort low`, which v1.4.2
+  // dropped from the chip palette but which existing migrated profiles
+  // still carry (the v1.4.0 migration pulled it from CLAUDE_FLAGS into
+  // customFlags). User feedback v1.4.3: *"still the default is --effort
+  // low"* despite the chip removal — because the chip removal didn't
+  // touch persisted profile data. This sweeps it on every load so users
+  // never have to manually delete it.
+  function scrubDeprecatedFlags(p) {
+    if (!p || !p.customFlags) return;
+    var f = p.customFlags;
+    f = f.replace(/--effort\s+low(\s|$)/g, " ");
+    f = f.replace(/\s+/g, " ").replace(/^\s+|\s+$/g, "");
+    p.customFlags = f;
+  }
+
   function loadProfiles() {
     var raw = readUtf8(profilesFile);
     if (raw) {
@@ -780,15 +796,23 @@
         if (parsed && parsed.profiles && parsed.profiles.length) {
           profilesState = parsed;
           if (!profilesState.version) profilesState.version = 1;
+          for (var i = 0; i < profilesState.profiles.length; i++) {
+            scrubDeprecatedFlags(profilesState.profiles[i]);
+          }
+          saveProfiles();  // persist the cleanup so it doesn't run forever
           return;
         }
       } catch (e) { /* fall through to migration */ }
     }
-    // First run (or corrupt file): seed with migrated Default
+    // First run (or corrupt file): seed with migrated Default. Migration
+    // also goes through the scrubber so a stale CLAUDE_FLAGS=--effort low
+    // in config.txt doesn't end up in the new Default profile.
+    var def = migrateFromConfigToDefault();
+    scrubDeprecatedFlags(def);
     profilesState = {
       version: 1,
       active: "Default",
-      profiles: [migrateFromConfigToDefault()]
+      profiles: [def]
     };
     saveProfiles();
   }
@@ -848,21 +872,28 @@
   // per saved profile; the active one gets .active styling. Closure binds
   // the profile name into each chip's onclick so iteration variable doesn't
   // collapse to the last value (a JScript ES3 trap).
+  // v1.4.3: build chip HTML as a single innerHTML string with inline
+  // onclick attributes. createElement + .onclick was unreliable in HTA —
+  // dynamically created buttons sometimes rendered without firing handlers
+  // even though the same pattern works on STATIC elements (the existing
+  // flag chips). innerHTML construction sidesteps this — IE parses the
+  // attribute string into a real onclick handler at render time.
+  // Profile name escaping: HTML entities for &<>", plus &#39; for the
+  // single quote we use to delimit the JS string in onclick=.
   function populateProfileChips() {
     var row = document.getElementById("profile-chips");
     if (!row) return;
-    while (row.firstChild) row.removeChild(row.firstChild);
+    var html = "";
     for (var i = 0; i < profilesState.profiles.length; i++) {
-      (function (name, isActive) {
-        var btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "profile-chip" + (isActive ? " active" : "");
-        btn.innerText = name;
-        btn.title = isActive ? "Active profile — already loaded" : "Switch to profile: " + name;
-        btn.onclick = function () { switchToProfile(name); };
-        row.appendChild(btn);
-      })(profilesState.profiles[i].name, profilesState.profiles[i].name === profilesState.active);
+      var name = profilesState.profiles[i].name;
+      var isActive = (name === profilesState.active);
+      var nameEsc = escapeHtml(name).replace(/'/g, "&#39;");
+      var cls = "profile-chip" + (isActive ? " active" : "");
+      var ttl = isActive ? "Active profile — already loaded" : "Switch to profile: " + name;
+      html += '<button type="button" class="' + cls + '" title="' + escapeHtml(ttl) + '"'
+            + ' onclick="switchToProfile(\'' + nameEsc + '\')">' + nameEsc + '</button>';
     }
+    row.innerHTML = html;
   }
 
   function switchToProfile(name) {
@@ -1080,7 +1111,7 @@
 
       <div class="lbl">Custom:</div>
       <div>
-        <input type="text" id="flag-custom" onkeyup="updateFlagPreview()" placeholder="Click chips above, or type any flags here verbatim" />
+        <input type="text" id="flag-custom" onkeyup="updateFlagPreview()" placeholder="" />
         <div class="flag-help">Anything in this box is appended verbatim to the Claude command. Chips above append into here; you can also edit freely.</div>
       </div>
     </div>
