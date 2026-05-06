@@ -268,9 +268,21 @@
   function autoSizeToContent() {
     try {
       var bodyHeight = document.body.scrollHeight + 60;  // chrome + margin
-      var screenH = window.screen.availHeight - 80;
-      var h = Math.min(bodyHeight, screenH);
-      if (h > 700) window.resizeTo(1040, h);
+      var availW = window.screen.availWidth;
+      var availH = window.screen.availHeight;
+      var w = 1040;
+      // Cap height so we never extend below the taskbar — a too-tall
+      // window placed at y=0 would still hide its bottom under the bar.
+      var h = Math.min(bodyHeight, availH - 60);
+      if (h < 700) h = 700;
+      window.resizeTo(w, h);
+      // Center the dialog so the bottom (Launch button + actions) stays
+      // visible regardless of monitor height. Earlier we let HTA pick
+      // the position, which often dropped the window low enough that
+      // the action row was hidden behind the taskbar.
+      var x = Math.max(0, Math.floor((availW - w) / 2));
+      var y = Math.max(0, Math.floor((availH - h) / 2));
+      window.moveTo(x, y);
     } catch (e) {}
   }
 
