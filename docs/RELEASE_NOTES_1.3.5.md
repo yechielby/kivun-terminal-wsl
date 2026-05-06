@@ -24,6 +24,8 @@ cd kivun-terminal-linux-1.3.5
 
 ### Folder picker dialog
 
+![Folder picker dialog](https://github.com/noambrand/kivun-terminal-wsl/releases/download/v1.3.5/picker.png)
+
 Double-clicking the desktop shortcut now opens a folder picker with two clearly numbered options:
 
 - **Type or paste a Windows path** (e.g. `C:\Users\you\projects\my-app`) and click **Launch Kivun Terminal**.
@@ -72,7 +74,7 @@ The statusline at the bottom of every Claude session now correctly shows two lin
 - **Konsole** — KDE terminal emulator with native BiDi support
 - **Claude Code** — installed via Anthropic's official curl installer
 - **kivun-claude-bidi** — Node.js wrapper that fixes Hebrew/Arabic rendering bugs in Claude's terminal output
-- **VcXsrv** *(optional, manual install)* — needed only for Alt+Shift keyboard switching
+- **VcXsrv** — required to switch between Hebrew and English keyboards (Alt+Shift) inside the terminal. [Download from SourceForge](https://sourceforge.net/projects/vcxsrv/) and run its installer once before launching Kivun Terminal.
 
 ---
 

@@ -115,6 +115,14 @@ REM launcher's empty-WORK_DIR guard then substituted %USERPROFILE%, and
 REM the user's chosen folder was silently discarded. Top-level statements
 REM between labels evaluate %VAR% at runtime, so the picker result
 REM actually reaches WORK_DIR.
+REM PICKER_INVOKED tracks whether the HTA dialog actually ran. When the
+REM picker DID run but produced no kivun-workdir.txt, that means the user
+REM clicked Cancel (or hit Esc / closed the X) — and the user-stated
+REM contract is "Cancel terminates", so the launcher exits without
+REM starting Konsole. The pre-Cancel-fix behavior was to silently fall
+REM back to %USERPROFILE%, which from the user's POV looked exactly like
+REM "Launch fired itself".
+set "PICKER_INVOKED=0"
 if /i not "%FOLDER_PICKER:~0,4%"=="true" goto :picker_done
 if not "%~1"=="" goto :picker_done
 call :LOG "INFO - FOLDER_PICKER enabled, launching HTA dialog"
@@ -124,6 +132,7 @@ if not exist "%~dp0folder-picker.hta" (
         call :LOG "WARNING - folder-picker.wsf also not found; skipping picker"
         goto :picker_done
     )
+    set "PICKER_INVOKED=1"
     cscript //Nologo "%~dp0folder-picker.wsf" >nul 2>&1
     goto :picker_read
 )
@@ -139,23 +148,50 @@ REM was unreliably synchronous in some configurations — Konsole
 REM could begin launching before the user finished with the picker
 REM dialog. Direct invocation guarantees the .bat blocks until the
 REM dialog window closes.
+set "PICKER_INVOKED=1"
 mshta.exe "%~dp0folder-picker.hta"
 :picker_read
 if not exist "%LOCALAPPDATA%\Kivun-WSL\kivun-workdir.txt" (
-    call :LOG "INFO - User cancelled folder picker, using default: %WORK_DIR%"
-    goto :picker_done
+    call :LOG "INFO - User cancelled folder picker — terminating launcher"
+    echo.
+    echo Cancelled.
+    exit /b 0
 )
 set "PICKED="
 set /p PICKED=<"%LOCALAPPDATA%\Kivun-WSL\kivun-workdir.txt"
 del "%LOCALAPPDATA%\Kivun-WSL\kivun-workdir.txt" >nul 2>&1
 if not defined PICKED (
-    call :LOG "INFO - Picker file empty, using default: %WORK_DIR%"
-    goto :picker_done
+    call :LOG "INFO - Picker file empty (treated as cancel) — terminating launcher"
+    echo.
+    echo Cancelled.
+    exit /b 0
 )
 set "WORK_DIR=%PICKED%"
 call :LOG "SUCCESS - User picked folder: %PICKED%"
 echo Work directory updated: %PICKED%
 :picker_done
+
+REM Re-read CLAUDE_FLAGS from config.txt — the HTA picker may have just
+REM rewritten the line based on the user's flag-picker selections, and
+REM the version we loaded at startup is now stale. Only this single key
+REM needs refreshing; language/theme/bidi keys aren't editable from the
+REM picker, so the rest of the config-loaded variables are still good.
+if exist "%~dp0config.txt" (
+    for /f "usebackq eol=# tokens=1,2 delims==" %%a in ("%~dp0config.txt") do (
+        if "%%a"=="CLAUDE_FLAGS" set "CLAUDE_FLAGS=%%b"
+    )
+    call :LOG "INFO - CLAUDE_FLAGS after picker: %CLAUDE_FLAGS%"
+)
+
+REM v1.4.0: pick up startup slash commands the HTA picker may have
+REM written (one command per line). kivun-launch.sh reads the file
+REM content itself and types each line into Konsole after Claude is up.
+REM Convert the Windows path to a WSL path so bash can read it directly.
+set "STARTUP_CMDS_WSL="
+if exist "%LOCALAPPDATA%\Kivun-WSL\kivun-startup-cmds.txt" (
+    for /f "delims=" %%i in ('wsl wslpath "%LOCALAPPDATA%\Kivun-WSL\kivun-startup-cmds.txt" 2^>nul') do set "STARTUP_CMDS_WSL=%%i"
+    call :LOG "INFO - Startup commands file: %STARTUP_CMDS_WSL%"
+)
 
 REM Set language-specific prompt. 23-entry lookup table. Default English.
 REM We strip a trailing CR (from CRLF config files) by slicing the variable
@@ -465,7 +501,7 @@ echo Launching Konsole...
 call :LOG "INFO - Launching Konsole via kivun-launch.sh"
 call :LOG "INFO - Command: wsl -d Ubuntu %WSL_USER_FLAG% bash %INST_WSL%kivun-launch.sh %WSL_PATH% [prompt] %PRIMARY_LANGUAGE% %USE_VCXSRV% %BASH_LOG_WSL% %TEXT_DIRECTION% %PRIMARY_MON% [flags]"
 title Kivun Terminal v%PRODUCT_VERSION% - Loading
-start "Kivun Bash" /MIN wsl -d Ubuntu %WSL_USER_FLAG% bash "%INST_WSL%kivun-launch.sh" "%WSL_PATH%" "%CLAUDE_PROMPT%" "%PRIMARY_LANGUAGE%" "%USE_VCXSRV%" "%BASH_LOG_WSL%" "%TEXT_DIRECTION%" "%PRIMARY_MON%" "%CLAUDE_FLAGS%"
+start "Kivun Bash" /MIN wsl -d Ubuntu %WSL_USER_FLAG% bash "%INST_WSL%kivun-launch.sh" "%WSL_PATH%" "%CLAUDE_PROMPT%" "%PRIMARY_LANGUAGE%" "%USE_VCXSRV%" "%BASH_LOG_WSL%" "%TEXT_DIRECTION%" "%PRIMARY_MON%" "%CLAUDE_FLAGS%" "%STARTUP_CMDS_WSL%"
 if %ERRORLEVEL% EQU 0 (
     call :LOG "SUCCESS - Launch command executed"
 ) else (

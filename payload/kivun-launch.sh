@@ -20,6 +20,7 @@ PRIMARY_MON="${7:-}"
 # Passed unquoted to claude so the shell word-splits "--a --b" into two
 # args. Not embedded in CLAUDE_PROMPT — that's the system prompt text.
 CLAUDE_FLAGS="${8:-}"
+STARTUP_CMDS_FILE="${9:-}"
 
 # v1.1.5: read product version from the VERSION file the .bat ships next
 # to this script. Single source of truth -- previously the bash log
@@ -821,6 +822,39 @@ if command -v xdotool >/dev/null 2>&1; then
   fi
 else
   log "WARNING - xdotool not available"
+fi
+
+# v1.4.0: type any startup slash commands the HTA picker recorded into
+# the running Konsole/Claude window. Background subshell so the main
+# launcher continues to wait on Konsole. Best-effort — silently skips
+# if xdotool is missing, the file is gone, or the Konsole window can't
+# be found.
+if [ -n "$STARTUP_CMDS_FILE" ] && [ -f "$STARTUP_CMDS_FILE" ] && command -v xdotool >/dev/null 2>&1; then
+  log "INFO - Startup commands file: $STARTUP_CMDS_FILE — will type after Claude is ready"
+  (
+    # Wait for Claude to be ready for input. 5s is the empirical lower
+    # bound on a warm WSL2; on a cold start the user will see the
+    # commands type a second or two after the Claude prompt appears.
+    sleep 5
+    KIVUN_WID=$(xdotool search --class kivun-terminal 2>/dev/null | head -1)
+    if [ -z "$KIVUN_WID" ]; then
+      KIVUN_WID=$(xdotool search --class konsole 2>/dev/null | head -1)
+    fi
+    if [ -n "$KIVUN_WID" ]; then
+      while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        log "INFO - Typing startup command: $line"
+        xdotool type --window "$KIVUN_WID" --delay 25 "$line" 2>/dev/null
+        xdotool key --window "$KIVUN_WID" Return 2>/dev/null
+        sleep 1
+      done < "$STARTUP_CMDS_FILE"
+    else
+      log "WARNING - Could not find Kivun/Konsole window for startup commands"
+    fi
+    # One-shot: clear the file so the next launch starts fresh unless
+    # the user re-enters commands in the picker.
+    rm -f "$STARTUP_CMDS_FILE" 2>/dev/null
+  ) &
 fi
 
 log "INFO - Waiting for Konsole process to complete"
