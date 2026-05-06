@@ -491,15 +491,9 @@
   function bindChips() {
     var chips = [
       ["chip-hebrew",      '--append-system-prompt "respond in Hebrew"'],
-      ["chip-fallback",    '--fallback-model sonnet'],
-      ["chip-effort-high", '--effort high'],
       ["chip-effort-low",  '--effort low'],
-      ["chip-ide",         '--ide'],
-      ["chip-budget",      '--max-budget-usd 5'],
-      ["chip-worktree",    '--worktree'],
-      ["chip-from-pr",     '--from-pr ""'],
-      ["chip-debug",       '--debug api'],
-      ["chip-verbose",     '--verbose']
+      ["chip-effort-high", '--effort high'],
+      ["chip-fallback",    '--fallback-model sonnet']
     ];
     for (var i = 0; i < chips.length; i++) {
       (function(template) {
@@ -557,16 +551,10 @@
 
       <div class="lbl">Quick options:</div>
       <div class="chip-row">
-        <button type="button" class="chip" id="chip-hebrew" title="Asks Claude to reply in Hebrew. Adds: --append-system-prompt &quot;respond in Hebrew&quot;">+ Respond in Hebrew</button>
-        <button type="button" class="chip" id="chip-fallback" title="If Opus is at capacity at launch, auto-switch to Sonnet for the session. Adds: --fallback-model sonnet">+ Fall back to Sonnet if Opus is busy</button>
-        <button type="button" class="chip" id="chip-effort-high" title="Tell Claude to think more carefully before answering — slower, more thorough. Adds: --effort high">+ Take more care</button>
-        <button type="button" class="chip" id="chip-effort-low" title="Tell Claude to answer quickly with less deliberation — fastest. Adds: --effort low">+ Quick answers</button>
-        <button type="button" class="chip" id="chip-ide" title="Auto-connect to a running IDE (VS Code, JetBrains) so Claude can see your editor. Adds: --ide">+ Connect to my IDE</button>
-        <button type="button" class="chip" id="chip-budget" title="Hard $ cap on total spend for this session (only enforced with --print). Adds: --max-budget-usd 5">+ Cap spend at $5</button>
-        <button type="button" class="chip" id="chip-worktree" title="Open the session inside a fresh git worktree, so experiments stay off your main branch. Adds: --worktree">+ Fresh git worktree</button>
-        <button type="button" class="chip" id="chip-from-pr" title="Resume a Claude session previously linked to a GitHub PR (paste the PR number or URL). Adds: --from-pr &quot;&quot;">+ From GitHub PR</button>
-        <button type="button" class="chip" id="chip-debug" title="Print Claude's internal API call traces — useful when reporting bugs. Adds: --debug api">+ API debug</button>
-        <button type="button" class="chip" id="chip-verbose" title="Show Claude's full internal logs in the terminal. Adds: --verbose">+ Verbose logs</button>
+        <button type="button" class="chip" id="chip-hebrew"     title="Asks Claude to reply in Hebrew">+ Respond in Hebrew</button>
+        <button type="button" class="chip" id="chip-effort-low" title="Quick, less-deliberate answers — fastest and cheapest">+ Quick answers</button>
+        <button type="button" class="chip" id="chip-effort-high" title="Slower, more thorough answers — Claude thinks harder before responding">+ More careful answers</button>
+        <button type="button" class="chip" id="chip-fallback"   title="If Opus is at capacity right when you launch, auto-switch to Sonnet so the session still starts">+ Don't fail if Opus is busy</button>
       </div>
 
       <div class="lbl">Custom:</div>
