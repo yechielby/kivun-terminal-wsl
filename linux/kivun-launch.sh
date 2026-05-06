@@ -282,6 +282,37 @@ fi
 : "${CLAUDE_FLAGS:=}"
 : "${CLAUDE_EXEC:=claude}"
 
+# v1.4.0: per-profile env vars from kivun-env.txt (KEY=VAL one per line,
+# # comments allowed). On Windows this file is written by the picker HTA;
+# on Linux without a picker, users can drop it manually until a Linux
+# picker ships. Read with a while-read loop (NOT `source`) so values are
+# treated as literal strings — `source` would re-evaluate $(...) and
+# backticks in user-provided values, recreating the same RCE class the
+# CLAUDE_FLAGS printf %q hardening above guards against.
+KIVUN_ENV_FILE="$HOME/.config/kivun-terminal/kivun-env.txt"
+if [ -f "$KIVUN_ENV_FILE" ]; then
+    while IFS= read -r raw_line || [ -n "$raw_line" ]; do
+        # strip trailing CR (CRLF files), leading/trailing whitespace
+        line="${raw_line%$'\r'}"
+        line="${line#"${line%%[![:space:]]*}"}"
+        line="${line%"${line##*[![:space:]]}"}"
+        # skip blanks and comments
+        [ -z "$line" ] && continue
+        [ "${line#\#}" != "$line" ] && continue
+        # split on first '=' only (preserves '=' inside VAL)
+        key="${line%%=*}"
+        val="${line#*=}"
+        # validate KEY: alphanumeric + underscore, leading non-digit.
+        # Picker enforces this Windows-side; we re-check Linux-side
+        # since hand-edited files don't go through the picker.
+        case "$key" in
+            ''|*[!A-Za-z0-9_]*) continue ;;
+            [0-9]*)              continue ;;
+        esac
+        export "$key=$val"
+    done < "$KIVUN_ENV_FILE"
+fi
+
 # `command -v` resolves both PATH lookups (`claude`) and absolute paths
 # (the wrapper binary). For absolute paths, `command -v` succeeds only if
 # the file is executable — so handle that case explicitly to give a

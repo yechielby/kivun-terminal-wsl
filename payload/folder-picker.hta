@@ -257,6 +257,80 @@
     margin: 6px 0 0 0;
     font-weight: 500;
   }
+
+  /* Profile bar (v1.4.0) - sits above the main dialog body */
+  .profile-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #ffffff;
+    border: 1px solid #cfd8dc;
+    border-radius: 6px;
+    padding: 9px 14px;
+    margin-bottom: 14px;
+  }
+  .profile-bar .lbl {
+    font-size: 13px;
+    font-weight: 600;
+    color: #303030;
+  }
+  .profile-bar select {
+    flex: 1;
+    padding: 6px 9px;
+    font-family: "Segoe UI", Arial, sans-serif;
+    font-size: 13px;
+    border: 1px solid #b8b8b8;
+    border-radius: 3px;
+    background: #fff;
+    min-width: 200px;
+  }
+  .profile-bar button {
+    padding: 6px 11px;
+    font-size: 12px;
+    min-width: 0;
+  }
+  .profile-bar .status {
+    font-size: 11px;
+    color: #707070;
+    margin-left: 4px;
+    min-width: 90px;
+  }
+  .profile-bar .status.saved { color: #2e7d32; }
+
+  /* Mask-toggle "eye" button on the env-vars textarea */
+  .env-row { position: relative; }
+  .env-row .mask-toggle {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    padding: 3px 9px;
+    font-size: 11px;
+    background: #fafafa;
+    border: 1px solid #c8c8c8;
+    border-radius: 3px;
+    cursor: pointer;
+    z-index: 2;
+  }
+  .env-row .mask-toggle:hover { background: #eee; }
+
+  /* Richer "resolved command" preview */
+  .flag-preview .cmd-line {
+    margin-top: 4px;
+    line-height: 1.5;
+  }
+  .flag-preview .cmd-line .arg-line {
+    color: #1c1c1c;
+  }
+  .flag-preview .cmd-line .secondary {
+    color: #555;
+    font-size: 11px;
+    display: block;
+    margin-top: 2px;
+  }
+  .flag-preview .cmd-line .secondary .key {
+    color: #003e6b;
+    font-weight: 600;
+  }
 </style>
 <script language="JScript">
   // Resize to fit all four sections WITHOUT scrolling. We use a generous
@@ -299,7 +373,18 @@
   var kivunDir = wshShell.ExpandEnvironmentStrings("%LOCALAPPDATA%") + "\\Kivun-WSL";
   var resultFile = kivunDir + "\\kivun-workdir.txt";
   var startupFile = kivunDir + "\\kivun-startup-cmds.txt";
+  var envFile = kivunDir + "\\kivun-env.txt";
+  var profilesFile = kivunDir + "\\profiles.json";
   var configFile = installDir + "\\config.txt";
+
+  // v1.4.0: profiles state. profiles.json is now the source of truth for
+  // CLAUDE_FLAGS / model / conv / startup commands / env vars; config.txt
+  // keeps only the BiDi tunables and language settings. Migration from a
+  // pre-v1.4 config.txt happens once on first run inside loadProfiles().
+  // Schema inspired by talayash/claude-terminal (MIT) but transcribed,
+  // not copied — different stack (HTA+JScript vs Tauri+React).
+  var profilesState = { version: 1, active: "Default", profiles: [] };
+  var maskEnvValues = true;  // safer default: env-var values masked in preview
 
   if (!fso.FolderExists(kivunDir)) { fso.CreateFolder(kivunDir); }
 
@@ -426,9 +511,58 @@
     return parts.join(" ");
   }
 
+  function escapeHtml(s) {
+    if (s === null || s === undefined) return "";
+    return ("" + s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
   function updateFlagPreview() {
     var s = composeFlags();
-    document.getElementById("flag-effective").innerText = s ? s : "(none — default Claude behavior)";
+    var flagsEl = document.getElementById("flag-effective");
+    if (flagsEl) flagsEl.innerText = s ? s : "(none — default Claude behavior)";
+
+    // Startup-cmds secondary line
+    var stEl = document.getElementById("preview-startup");
+    if (stEl) {
+      var raw = (document.getElementById("startup-cmds") || {value: ""}).value || "";
+      var lines = raw.split(/\r?\n/);
+      var cleaned = [];
+      for (var i = 0; i < lines.length; i++) {
+        var ln = lines[i].replace(/^\s+|\s+$/g, "");
+        if (ln) cleaned.push(ln);
+      }
+      if (cleaned.length) {
+        stEl.style.display = "block";
+        stEl.innerHTML = "↳ then types: " + escapeHtml(cleaned.join(", "));
+      } else {
+        stEl.style.display = "none";
+        stEl.innerHTML = "";
+      }
+    }
+
+    // Env-vars secondary line (masked unless toggled)
+    var envEl = document.getElementById("preview-env");
+    if (envEl) {
+      var entries = parseEnvVars((document.getElementById("env-vars") || {value: ""}).value || "");
+      if (entries.length) {
+        envEl.style.display = "block";
+        var parts = [];
+        for (var j = 0; j < entries.length; j++) {
+          var k = escapeHtml(entries[j].key);
+          var v = escapeHtml(entries[j].val);
+          if (maskEnvValues) {
+            parts.push('<span class="key">' + k + '</span>=…(set)');
+          } else {
+            parts.push('<span class="key">' + k + '</span>=' + v);
+          }
+        }
+        var label = maskEnvValues ? "↳ with env (masked): " : "↳ with env: ";
+        envEl.innerHTML = label + parts.join(", ");
+      } else {
+        envEl.style.display = "none";
+        envEl.innerHTML = "";
+      }
+    }
   }
 
   function loadFlagsFromConfig() {
@@ -512,8 +646,19 @@
       document.getElementById("path").focus();
       return;
     }
+    // Persist current dialog state to the active profile + write the
+    // sidecar files the launcher consumes (startup cmds, env vars).
+    try {
+      var active = getActiveProfile();
+      captureDialogToProfile(active);
+      saveProfiles();
+    } catch (e) {}
+    // Keep config.txt's CLAUDE_FLAGS in sync for backwards compat with
+    // any external tool that scrapes config.txt; profiles.json is the
+    // source of truth from v1.4.0 onwards.
     try { writeFlagsToConfig(composeFlags()); } catch (e) {}
     try { writeStartupCmds(); } catch (e) {}
+    try { writeEnvFile(); } catch (e) {}
     writePath(p);
     window.close();
   }
@@ -566,11 +711,267 @@
     return true;
   };
 
+  // ---- Profiles (v1.4.0) ---------------------------------------------
+
+  function defaultProfileObj(name) {
+    return {
+      name: name || "Default",
+      folder: "",
+      model: "opus",
+      conv: "",
+      customFlags: "",
+      startupCmds: "",
+      envVars: ""
+    };
+  }
+
+  // First-run migration: synthesize a Default profile from the legacy
+  // CLAUDE_FLAGS line in config.txt so existing users don't lose their
+  // pinned flags when they upgrade to v1.4.0.
+  function migrateFromConfigToDefault() {
+    var p = defaultProfileObj("Default");
+    var content = readUtf8(configFile);
+    var match = content.match(/^CLAUDE_FLAGS=(.*)$/m);
+    var current = match ? match[1].replace(/^\s+|\s+$/g, "") : "";
+    if (current) {
+      var m = current.match(/--model\s+(\S+)/);
+      if (m) { p.model = m[1]; current = current.replace(m[0], ""); }
+      if (/(^|\s)--continue(\s|$)/.test(current)) {
+        p.conv = "--continue";
+        current = current.replace(/--continue/g, "");
+      } else if (/(^|\s)--resume(\s|$)/.test(current)) {
+        p.conv = "--resume";
+        current = current.replace(/--resume/g, "");
+      }
+      p.customFlags = current.replace(/\s+/g, " ").replace(/^\s+|\s+$/g, "");
+    }
+    return p;
+  }
+
+  function loadProfiles() {
+    var raw = readUtf8(profilesFile);
+    if (raw) {
+      try {
+        var parsed = JSON.parse(raw);
+        if (parsed && parsed.profiles && parsed.profiles.length) {
+          profilesState = parsed;
+          if (!profilesState.version) profilesState.version = 1;
+          return;
+        }
+      } catch (e) { /* fall through to migration */ }
+    }
+    // First run (or corrupt file): seed with migrated Default
+    profilesState = {
+      version: 1,
+      active: "Default",
+      profiles: [migrateFromConfigToDefault()]
+    };
+    saveProfiles();
+  }
+
+  function saveProfiles() {
+    try {
+      var json = JSON.stringify(profilesState, null, 2);
+      writeUtf8NoBom(profilesFile, json);
+    } catch (e) {
+      try { showError("Could not save profiles: " + (e.message || e.description || e)); } catch (_) {}
+    }
+  }
+
+  function findProfile(name) {
+    for (var i = 0; i < profilesState.profiles.length; i++) {
+      if (profilesState.profiles[i].name === name) return i;
+    }
+    return -1;
+  }
+
+  function getActiveProfile() {
+    var i = findProfile(profilesState.active);
+    if (i < 0) {
+      // active points at a deleted profile — fall back to first
+      profilesState.active = profilesState.profiles[0].name;
+      i = 0;
+    }
+    return profilesState.profiles[i];
+  }
+
+  function captureDialogToProfile(target) {
+    target.folder      = (document.getElementById("path").value || "").replace(/^\s+|\s+$/g, "");
+    target.model       = getRadioValue("flag-model");
+    target.conv        = getRadioValue("flag-conv");
+    target.customFlags = (document.getElementById("flag-custom").value || "").replace(/^\s+|\s+$/g, "");
+    target.startupCmds = document.getElementById("startup-cmds").value || "";
+    target.envVars     = document.getElementById("env-vars").value || "";
+  }
+
+  function applyProfileToDialog(p) {
+    document.getElementById("path").value         = p.folder || "";
+    setRadioValue("flag-model", p.model || "opus");
+    setRadioValue("flag-conv", p.conv || "");
+    document.getElementById("flag-custom").value  = p.customFlags || "";
+    document.getElementById("startup-cmds").value = p.startupCmds || "";
+    document.getElementById("env-vars").value     = p.envVars || "";
+    updateFlagPreview();
+  }
+
+  function populateProfileDropdown() {
+    var sel = document.getElementById("profile-select");
+    while (sel.firstChild) sel.removeChild(sel.firstChild);
+    for (var i = 0; i < profilesState.profiles.length; i++) {
+      var opt = document.createElement("option");
+      opt.value = profilesState.profiles[i].name;
+      opt.text  = profilesState.profiles[i].name;
+      if (profilesState.profiles[i].name === profilesState.active) opt.selected = true;
+      sel.appendChild(opt);
+    }
+  }
+
+  // Track which profile is currently shown in the dialog so a switch
+  // saves the outgoing edits before loading the incoming profile.
+  var currentDialogProfile = null;
+
+  function onProfileChange() {
+    // Save outgoing dialog state into its profile object
+    if (currentDialogProfile) {
+      var idxOut = findProfile(currentDialogProfile);
+      if (idxOut >= 0) {
+        captureDialogToProfile(profilesState.profiles[idxOut]);
+      }
+    }
+    var sel = document.getElementById("profile-select");
+    var name = sel.value;
+    profilesState.active = name;
+    var idxIn = findProfile(name);
+    if (idxIn >= 0) {
+      applyProfileToDialog(profilesState.profiles[idxIn]);
+      currentDialogProfile = name;
+      saveProfiles();
+      flashStatus("loaded");
+    }
+  }
+
+  function flashStatus(kind) {
+    var s = document.getElementById("profile-status");
+    if (!s) return;
+    s.className = "status saved";
+    s.innerText = (kind === "saved") ? "✓ saved" : "✓ loaded";
+    setTimeout(function () { try { s.innerText = ""; s.className = "status"; } catch (_) {} }, 1400);
+  }
+
+  function saveProfileAs() {
+    clearError();
+    var name = "";
+    try { name = window.prompt("Save current settings as a new profile.\nProfile name:", ""); } catch (e) {}
+    if (name === null || name === undefined) return;
+    name = ("" + name).replace(/^\s+|\s+$/g, "");
+    if (!name) { showError("Profile name cannot be empty."); return; }
+    if (findProfile(name) >= 0) { showError("A profile named \"" + name + "\" already exists."); return; }
+    var p = defaultProfileObj(name);
+    captureDialogToProfile(p);
+    profilesState.profiles.push(p);
+    profilesState.active = name;
+    currentDialogProfile = name;
+    populateProfileDropdown();
+    saveProfiles();
+    flashStatus("saved");
+  }
+
+  function renameProfile() {
+    clearError();
+    var idx = findProfile(profilesState.active);
+    if (idx < 0) return;
+    var oldName = profilesState.profiles[idx].name;
+    var newName = "";
+    try { newName = window.prompt("Rename profile \"" + oldName + "\" to:", oldName); } catch (e) {}
+    if (newName === null || newName === undefined) return;
+    newName = ("" + newName).replace(/^\s+|\s+$/g, "");
+    if (!newName || newName === oldName) return;
+    if (findProfile(newName) >= 0) { showError("A profile named \"" + newName + "\" already exists."); return; }
+    profilesState.profiles[idx].name = newName;
+    profilesState.active = newName;
+    currentDialogProfile = newName;
+    populateProfileDropdown();
+    saveProfiles();
+    flashStatus("saved");
+  }
+
+  function deleteProfile() {
+    clearError();
+    var idx = findProfile(profilesState.active);
+    if (idx < 0) return;
+    var name = profilesState.profiles[idx].name;
+    if (name === "Default") {
+      showError("The Default profile cannot be deleted (it auto-rebuilds on next launch).");
+      return;
+    }
+    var ok = false;
+    try { ok = window.confirm("Delete profile \"" + name + "\"? This cannot be undone."); } catch (e) {}
+    if (!ok) return;
+    profilesState.profiles.splice(idx, 1);
+    if (profilesState.profiles.length === 0) {
+      profilesState.profiles.push(defaultProfileObj("Default"));
+    }
+    profilesState.active = profilesState.profiles[0].name;
+    currentDialogProfile = profilesState.active;
+    populateProfileDropdown();
+    applyProfileToDialog(profilesState.profiles[0]);
+    saveProfiles();
+    flashStatus("saved");
+  }
+
+  // ---- Env vars (v1.4.0) ----------------------------------------------
+  // Parse the env-vars textarea into [{key,val}]. Lines starting with #
+  // are comments; blank lines ignored. Malformed lines (no '=') skipped.
+  function parseEnvVars(raw) {
+    var out = [];
+    if (!raw) return out;
+    var lines = raw.split(/\r?\n/);
+    for (var i = 0; i < lines.length; i++) {
+      var ln = lines[i].replace(/^\s+|\s+$/g, "");
+      if (!ln || ln.charAt(0) === "#") continue;
+      var eq = ln.indexOf("=");
+      if (eq <= 0) continue;
+      var key = ln.substring(0, eq).replace(/^\s+|\s+$/g, "");
+      var val = ln.substring(eq + 1);
+      if (!key) continue;
+      // Validate KEY: alphanumeric + underscore. Reject anything else
+      // so a malformed line can't be smuggled into WSLENV / set.
+      if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) continue;
+      out.push({ key: key, val: val });
+    }
+    return out;
+  }
+
+  function writeEnvFile() {
+    var entries = parseEnvVars(document.getElementById("env-vars").value);
+    if (entries.length === 0) {
+      deleteIfExists(envFile);
+      return;
+    }
+    var lines = [];
+    for (var i = 0; i < entries.length; i++) {
+      lines.push(entries[i].key + "=" + entries[i].val);
+    }
+    writeUtf8NoBom(envFile, lines.join("\n") + "\n");
+  }
+
+  function toggleMaskEnv() {
+    maskEnvValues = !maskEnvValues;
+    var btn = document.getElementById("mask-toggle");
+    if (btn) btn.innerText = maskEnvValues ? "👁 show values" : "🙈 hide values";
+    updateFlagPreview();
+  }
+
   function init() {
     try {
       deleteIfExists(startupFile);   // start each session fresh
+      deleteIfExists(envFile);       // env file too — only the chosen profile's vars apply
       bindChips();
-      loadFlagsFromConfig();
+      loadProfiles();
+      populateProfileDropdown();
+      var active = getActiveProfile();
+      currentDialogProfile = active.name;
+      applyProfileToDialog(active);
       autoSizeToContent();
       var p = document.getElementById("path");
       if (p && p.focus) p.focus();
@@ -578,12 +979,23 @@
       try { showError("init error: " + (e.message || e.description || e)); } catch (_) {}
     }
   }
+
 </script>
 </head>
 <body onload="init()">
+  <div class="profile-bar">
+    <span class="lbl">Profile:</span>
+    <select id="profile-select" onchange="onProfileChange()"></select>
+    <button type="button" onclick="saveProfileAs()" title="Save current settings as a new profile">Save As…</button>
+    <button type="button" onclick="renameProfile()" title="Rename the current profile">Rename</button>
+    <button type="button" onclick="deleteProfile()" title="Delete the current profile (Default cannot be deleted)">Delete</button>
+    <span class="status" id="profile-status"></span>
+  </div>
+
   <h1>Pick a folder for Kivun Terminal</h1>
   <p class="hint">
     Choose <b>one</b> of the two options below, optionally tune the Claude flags + startup commands, then click <b>Launch Kivun Terminal</b>.
+    Switch <b>Profile</b> at the top to load a saved combo (folder, model, flags, startup commands, env vars).
   </p>
 
   <div class="option">
@@ -638,13 +1050,31 @@
       </div>
     </div>
 
-    <div class="flag-preview"><span class="label">Effective:</span><span id="flag-effective">(none)</span></div>
+    <div class="flag-preview">
+      <span class="label">Will run:</span>
+      <div class="cmd-line">
+        <div class="arg-line">$ claude <span id="flag-effective">(none)</span></div>
+        <div class="secondary" id="preview-startup" style="display:none"></div>
+        <div class="secondary" id="preview-env" style="display:none"></div>
+      </div>
+    </div>
   </div>
 
   <div class="option" style="margin-top:12px">
     <div class="opt-label"><span class="opt-num">4</span> Startup slash commands (optional):</div>
-    <textarea id="startup-cmds" rows="3" placeholder="One per line, e.g.&#10;/voicemode:converse&#10;/model opus"></textarea>
+    <textarea id="startup-cmds" rows="3" onkeyup="updateFlagPreview()" placeholder="One per line, e.g.&#10;/voicemode:converse&#10;/model opus"></textarea>
     <div class="flag-help">Each line is typed into Claude after the session opens. Use this to auto-launch voice mode, switch to a specific model, etc. Leave empty for normal launch.</div>
+  </div>
+
+  <div class="option" style="margin-top:12px">
+    <div class="opt-label">
+      <span class="opt-num">5</span> Environment variables (optional):
+      <button type="button" id="mask-toggle" style="margin-left:auto; padding:4px 10px; font-size:11px; min-width:0;" onclick="toggleMaskEnv()" title="Toggle whether env-var values are shown in the preview below. Values are always masked by default — click to reveal.">👁 show values</button>
+    </div>
+    <div class="env-row">
+      <textarea id="env-vars" rows="3" onkeyup="updateFlagPreview()" placeholder="KEY=VAL, one per line. Lines starting with # are ignored.&#10;e.g.&#10;ANTHROPIC_API_KEY=sk-ant-...&#10;DEBUG=1"></textarea>
+    </div>
+    <div class="flag-help">Per-profile environment variables passed into the Claude session. Values are masked in the preview by default for screenshot safety — click <b>👁 show values</b> above to reveal.</div>
   </div>
 
   <div class="actions">

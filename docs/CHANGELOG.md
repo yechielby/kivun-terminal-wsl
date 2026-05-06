@@ -3,6 +3,28 @@
 All notable changes to Kivun Terminal are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.4.0] - 2026-05-06
+
+### Named profiles in the folder picker (+ env vars + masked preview)
+
+The picker dialog grows a **profile bar** at the top so users with multiple projects can save folder + model + flags + startup commands + env vars as named combos and switch between them with a dropdown. Inspired by — but not copied from — talayash/claude-terminal (MIT, Tauri+React stack); transcribed schema, no shared code.
+
+- **`payload/folder-picker.hta`** — new top-of-dialog profile bar (`<select>` + Save As / Rename / Delete). New section §5 for `KEY=VAL` environment variables (one per line, `#` comments allowed). Resolved-command preview rebuilt: now shows the full `$ claude <flags>` line plus secondary lines for startup-cmds (`↳ then types: …`) and env-vars (`↳ with env (masked): KEY=…(set), …`). Env values are **masked by default** for screenshot safety; an `👁 show values` toggle next to the §5 label reveals them. Profiles persist to `%LOCALAPPDATA%\Kivun-WSL\profiles.json`. First-run migration: a missing `profiles.json` is seeded from the legacy `CLAUDE_FLAGS=` line in `config.txt` so existing users don't lose pinned flags.
+- **`payload/kivun-terminal.bat`** — reads `%LOCALAPPDATA%\Kivun-WSL\kivun-env.txt` (written by the picker on Launch) before invoking WSL. Each `KEY=VAL` is set as a cmd.exe env var via the new `:ADDENV` subroutine, and the keys are appended to `WSLENV` so they cross the Windows→WSL boundary. Subroutine pattern (vs. inline assignment in a `for /f` loop) avoids needing `setlocal enabledelayedexpansion`.
+- **`linux/kivun-launch.sh`** — mirrors env-var sourcing from `~/.config/kivun-terminal/kivun-env.txt`. Uses a `while read` loop with `export "$key=$val"` (NOT `source`) so user-provided values are treated as literal strings — `source` would re-evaluate `$(…)` and backticks in values, recreating the same RCE class the existing `CLAUDE_FLAGS` `printf %q` hardening guards against. KEY validation (`[A-Za-z_][A-Za-z0-9_]*`) is duplicated Linux-side because hand-edited files don't go through the picker's validation.
+
+### Why this isn't a config.txt schema change
+
+`config.txt` keeps the BiDi tunables and language settings. Profiles for **flags / model / conv / startup / env** move to `profiles.json` because (a) the picker dialog is now the canonical UI for those fields and (b) profile switching is a runtime action that doesn't fit the load-once `config.txt` schema. The legacy `CLAUDE_FLAGS=` line is still written by the picker on Launch for backwards compatibility with anything that scrapes `config.txt` externally, but `profiles.json` is the source of truth from v1.4.0 onwards.
+
+### Edge cases handled
+
+- **Default profile is undeletable.** It auto-rebuilds on next launch if `profiles.json` is missing or corrupt — by parsing the current `CLAUDE_FLAGS=` from `config.txt` (the same migration path used on first run).
+- **Profile name collisions** on Save As / Rename are blocked with an inline error — no silent overwrite.
+- **Malformed env-var lines** (no `=`, invalid KEY, leading digit) are silently skipped by the picker writer; the .bat and .sh consumers re-validate on read because hand-edited files exist.
+- **Empty env vars textarea** → no `kivun-env.txt` is written; the .bat takes the "no per-profile env vars to load" branch and `WSLENV` is left as-is.
+- **Diagnostic logging** for `WSLENV` was initially placed inside the `if exist (…)` block; cmd parse-time-expands the body of `(…)` blocks once, so `%WSLENV%` reflected pre-loop state. Fixed by moving the log line outside the block (top-level statements re-expand at runtime).
+
 ## [1.3.5] - 2026-05-05
 
 ### Roll back to v1.3.3 picker; drop icon attempt entirely
