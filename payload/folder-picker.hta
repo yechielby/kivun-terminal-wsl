@@ -364,35 +364,42 @@
   // --append-system-prompt, --effort low + high, --permission-mode A
   // and B), the latest click REPLACES the prior value. Otherwise the
   // chip is a no-op when its flag is already present.
+  //
+  // The whole body is wrapped in try/catch — a thrown exception in an
+  // HTA event handler kills mshta silently, and the launcher then sees
+  // no kivun-workdir.txt and silently falls back to Konsole-at-home,
+  // which is indistinguishable from "I clicked Launch" to the user.
   function addCustomFlag(template) {
-    var box = document.getElementById("flag-custom");
-    var current = box.value.replace(/^\s+|\s+$/g, "");
+    try {
+      var box = document.getElementById("flag-custom");
+      var current = (box && box.value ? box.value : "").replace(/^\s+|\s+$/g, "");
 
-    // Replace-on-repeat flags
-    var replaceablePatterns = [
-      [/--append-system-prompt\s+"[^"]*"/g, "--append-system-prompt"],
-      [/--effort\s+\S+/g,                   "--effort"],
-      [/--permission-mode\s+\S+/g,          "--permission-mode"],
-      [/--fallback-model\s+\S+/g,           "--fallback-model"]
-    ];
-    for (var i = 0; i < replaceablePatterns.length; i++) {
-      var pattern = replaceablePatterns[i][0];
-      var leadToken = replaceablePatterns[i][1];
-      if (template.indexOf(leadToken) === 0) {
-        current = current.replace(pattern, "").replace(/\s+/g, " ").replace(/^\s+|\s+$/g, "");
-        box.value = current ? (current + " " + template) : template;
-        updateFlagPreview();
-        box.focus();
-        return;
+      var replaceablePatterns = [
+        [/--append-system-prompt\s+"[^"]*"/g, "--append-system-prompt"],
+        [/--effort\s+\S+/g,                   "--effort"],
+        [/--permission-mode\s+\S+/g,          "--permission-mode"],
+        [/--fallback-model\s+\S+/g,           "--fallback-model"]
+      ];
+      for (var i = 0; i < replaceablePatterns.length; i++) {
+        var pattern = replaceablePatterns[i][0];
+        var leadToken = replaceablePatterns[i][1];
+        if (template.indexOf(leadToken) === 0) {
+          current = current.replace(pattern, "").replace(/\s+/g, " ").replace(/^\s+|\s+$/g, "");
+          box.value = current ? (current + " " + template) : template;
+          updateFlagPreview();
+          if (box.focus) box.focus();
+          return;
+        }
       }
-    }
 
-    // Default: skip if first token already present
-    var firstToken = template.split(/\s/)[0];
-    if (current && current.indexOf(firstToken) >= 0) return;
-    box.value = current ? (current + " " + template) : template;
-    updateFlagPreview();
-    box.focus();
+      var firstToken = template.split(/\s/)[0];
+      if (current && current.indexOf(firstToken) >= 0) return;
+      box.value = current ? (current + " " + template) : template;
+      updateFlagPreview();
+      if (box.focus) box.focus();
+    } catch (e) {
+      try { showError("addCustomFlag error: " + (e.message || e.description || e)); } catch (_) {}
+    }
   }
 
   function composeFlags() {
@@ -535,12 +542,29 @@
     }
   }
 
+  // Catch any unhandled JScript error and display it instead of letting
+  // mshta exit silently — a silent exit is interpreted by the .bat as
+  // "user cancelled" and Konsole opens at the home folder, looking to
+  // the user like Launch fired itself.
+  window.onerror = function(msg, url, line) {
+    try {
+      var el = document.getElementById("err");
+      if (el) el.innerText = "Picker error (line " + line + "): " + msg;
+    } catch (_) {}
+    return true;
+  };
+
   function init() {
-    deleteIfExists(startupFile);   // start each session fresh
-    bindChips();
-    loadFlagsFromConfig();
-    autoSizeToContent();
-    document.getElementById("path").focus();
+    try {
+      deleteIfExists(startupFile);   // start each session fresh
+      bindChips();
+      loadFlagsFromConfig();
+      autoSizeToContent();
+      var p = document.getElementById("path");
+      if (p && p.focus) p.focus();
+    } catch (e) {
+      try { showError("init error: " + (e.message || e.description || e)); } catch (_) {}
+    }
   }
 </script>
 </head>
@@ -559,7 +583,7 @@
 
   <div class="option">
     <div class="opt-label"><span class="opt-num">2</span> Pick a folder from the Windows folder tree:</div>
-    <button class="browse" onclick="browseFolder()">Browse Folder Tree...</button>
+    <button type="button" class="browse" onclick="browseFolder()">Browse Folder Tree...</button>
   </div>
 
   <div class="option" style="margin-top:12px">
@@ -612,10 +636,10 @@
   </div>
 
   <div class="actions">
-    <button class="config" onclick="editConfig()" title="Open config.txt in Notepad for advanced settings (language, theme, BiDi tunables)">Open config.txt (advanced)</button>
+    <button type="button" class="config" onclick="editConfig()" title="Open config.txt in Notepad for advanced settings (language, theme, BiDi tunables)">Open config.txt (advanced)</button>
     <div class="right">
-      <button class="cancel" onclick="cancel()">Cancel</button>
-      <button class="primary ok" onclick="ok()">Launch Kivun Terminal</button>
+      <button type="button" class="cancel" onclick="cancel()">Cancel</button>
+      <button type="button" class="primary ok" onclick="ok()">Launch Kivun Terminal</button>
     </div>
   </div>
   <p class="err" id="err"></p>
