@@ -360,10 +360,36 @@
   }
 
   // Append a flag template to the custom-flags textbox (chip click).
+  // For flags that don't combine cleanly when repeated (multiple
+  // --append-system-prompt, --effort low + high, --permission-mode A
+  // and B), the latest click REPLACES the prior value. Otherwise the
+  // chip is a no-op when its flag is already present.
   function addCustomFlag(template) {
     var box = document.getElementById("flag-custom");
     var current = box.value.replace(/^\s+|\s+$/g, "");
-    if (current && current.indexOf(template.split(/\s/)[0]) >= 0) return;  // already present (rough check)
+
+    // Replace-on-repeat flags
+    var replaceablePatterns = [
+      [/--append-system-prompt\s+"[^"]*"/g, "--append-system-prompt"],
+      [/--effort\s+\S+/g,                   "--effort"],
+      [/--permission-mode\s+\S+/g,          "--permission-mode"],
+      [/--fallback-model\s+\S+/g,           "--fallback-model"]
+    ];
+    for (var i = 0; i < replaceablePatterns.length; i++) {
+      var pattern = replaceablePatterns[i][0];
+      var leadToken = replaceablePatterns[i][1];
+      if (template.indexOf(leadToken) === 0) {
+        current = current.replace(pattern, "").replace(/\s+/g, " ").replace(/^\s+|\s+$/g, "");
+        box.value = current ? (current + " " + template) : template;
+        updateFlagPreview();
+        box.focus();
+        return;
+      }
+    }
+
+    // Default: skip if first token already present
+    var firstToken = template.split(/\s/)[0];
+    if (current && current.indexOf(firstToken) >= 0) return;
     box.value = current ? (current + " " + template) : template;
     updateFlagPreview();
     box.focus();
@@ -493,7 +519,13 @@
       ["chip-hebrew",      '--append-system-prompt "respond in Hebrew"'],
       ["chip-effort-low",  '--effort low'],
       ["chip-effort-high", '--effort high'],
-      ["chip-fallback",    '--fallback-model sonnet']
+      ["chip-concise",     '--append-system-prompt "be concise; keep responses short"'],
+      ["chip-stepbystep",  '--append-system-prompt "explain your reasoning step by step"'],
+      ["chip-tests",       '--append-system-prompt "always include tests for any code changes"'],
+      ["chip-acceptedits", '--permission-mode acceptEdits'],
+      ["chip-readonly",    '--disallowedTools "Edit Write MultiEdit"'],
+      ["chip-fallback",    '--fallback-model sonnet'],
+      ["chip-confirm",     '--append-system-prompt "describe planned changes before making them"']
     ];
     for (var i = 0; i < chips.length; i++) {
       (function(template) {
@@ -551,10 +583,16 @@
 
       <div class="lbl">Quick options:</div>
       <div class="chip-row">
-        <button type="button" class="chip" id="chip-hebrew"     title="Asks Claude to reply in Hebrew">+ Respond in Hebrew</button>
-        <button type="button" class="chip" id="chip-effort-low" title="Quick, less-deliberate answers — fastest and cheapest">+ Quick answers</button>
-        <button type="button" class="chip" id="chip-effort-high" title="Slower, more thorough answers — Claude thinks harder before responding">+ More careful answers</button>
-        <button type="button" class="chip" id="chip-fallback"   title="If Opus is at capacity right when you launch, auto-switch to Sonnet so the session still starts">+ Don't fail if Opus is busy</button>
+        <button type="button" class="chip" id="chip-hebrew"      title="Asks Claude to reply in Hebrew">+ Respond in Hebrew</button>
+        <button type="button" class="chip" id="chip-effort-low"  title="--effort low — Claude answers quickly with less deliberation; fastest and cheapest">+ Low effort</button>
+        <button type="button" class="chip" id="chip-effort-high" title="--effort high — Claude thinks harder before answering; slower and more thorough">+ High effort</button>
+        <button type="button" class="chip" id="chip-concise"     title="Tells Claude to keep replies short and to the point">+ Concise responses</button>
+        <button type="button" class="chip" id="chip-stepbystep"  title="Tells Claude to explain its reasoning step by step before any conclusion">+ Step-by-step reasoning</button>
+        <button type="button" class="chip" id="chip-tests"       title="Tells Claude to always include tests when writing or changing code">+ Always include tests</button>
+        <button type="button" class="chip" id="chip-acceptedits" title="--permission-mode acceptEdits — auto-accept file edits without asking each time (Shift+Tab inside Claude does the same per-session)">+ Auto-accept file edits</button>
+        <button type="button" class="chip" id="chip-readonly"    title="Disable Edit/Write/MultiEdit tools — Claude can read and explain code but can't modify files">+ Read-only (no file edits)</button>
+        <button type="button" class="chip" id="chip-fallback"    title="--fallback-model sonnet — if Opus is at capacity at launch, auto-switch to Sonnet so the session still starts">+ Don't fail if Opus is busy</button>
+        <button type="button" class="chip" id="chip-confirm"     title="Tells Claude to describe planned changes before making them">+ Confirm before changes</button>
       </div>
 
       <div class="lbl">Custom:</div>
