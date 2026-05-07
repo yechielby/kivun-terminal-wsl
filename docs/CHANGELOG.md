@@ -3,6 +3,22 @@
 All notable changes to Kivun Terminal are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.4.5] - 2026-05-07
+
+### Collapse Advanced section in picker + fix sticky `--continue` bug
+
+> Note: v1.4.4 was tagged earlier the same day but the version bump landed after the tag, so the CI's `VERSION matches tag` check failed and no installer was attached. v1.4.5 supersedes it.
+
+User feedback after v1.4.3: the picker presented model / flags / startup-cmds / env-vars as five visible sections — overwhelming for first-time users — and a separate report that right-clicking a folder via the desktop shortcut crashed Claude with `No conversation found to continue` even though the user hadn't asked for `--continue`.
+
+- **`payload/folder-picker.hta`** — sections 3 (Claude flags), 4 (startup slash commands), 5 (environment variables) wrapped in a collapsible `<div id="advanced-body">` toggled by a single button labelled `▶ Advanced options — click to show model, flags, startup slash commands, env vars`. Default state is collapsed regardless of profile content. Window opens at a compact 615 px and grows to fit content when the toggle is clicked (`autoSizeToContent` switches between fixed 615 px collapsed and dynamic `scrollHeight + 60` expanded; HTA's scrollHeight measurement is unreliable when content is `display:none`, so the collapsed branch hardcodes the value rather than measuring).
+- **`payload/folder-picker.hta`** — new `composeFlagsForConfig()` helper used in the `writeFlagsToConfig` call. It excludes `--continue` and `--resume` (the two values from the `flag-conv` radio group). `composeFlags()` still includes them for the live preview and the actual launch. The reason: right-click "Open with Kivun Terminal" reads `CLAUDE_FLAGS` from `config.txt` and runs `claude` with those flags in the chosen folder; if a previous picker session set `flag-conv=Continue last`, the resulting `CLAUDE_FLAGS=--continue` line poisoned every right-click launch on a folder with no prior session. Conversation flags are now per-launch only — they affect the current click but never become sticky.
+
+### How the `--continue` bug surfaced
+
+User picked "Continue last" once in the picker, then later right-clicked a different folder via the Kivun shortcut. Konsole opened, Claude printed `No conversation found to continue`, and exited. The bash launcher correctly word-split the flags, so the regression was entirely in `composeFlags()` writing conversation state to a global config file shared with the right-click code path. Previous picker work (v1.4.0–v1.4.3) treated CLAUDE_FLAGS as the source of truth for "what flags this user wants" — that mental model breaks when one of those flags is per-session by definition.
+
+
 ## [1.4.3] - 2026-05-06
 
 ### Three picker fixes from continued user testing
